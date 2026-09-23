@@ -1,0 +1,316 @@
+@startuml Nanny_ER_Diagram
+title Nanny Platform - ER Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide circle
+
+package "Identity & Trust" {
+  entity "users" as users {
+    *id : SERIAL <<PK>>
+    --
+    full_name : VARCHAR(120)
+    email : VARCHAR(160) <<UQ>>
+    phone : VARCHAR(40)
+    password_hash : VARCHAR(255)
+    role : owner, sitter, admin
+    avatar_url : TEXT
+    address : VARCHAR(255)
+    emergency_contact_name : VARCHAR(120)
+    emergency_contact_phone : VARCHAR(40)
+    emergency_contact_notes : TEXT
+    reset_password_token : TEXT
+    reset_password_expires_at : TIMESTAMPTZ
+    is_blocked : BOOLEAN
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "sitters" as sitters {
+    *id : SERIAL <<PK>>
+    --
+    user_id : INT <<FK>>
+    description : TEXT
+    experience_yrs : INT
+    city : VARCHAR(80)
+    district : VARCHAR(80)
+    latitude : DOUBLE
+    longitude : DOUBLE
+    price_per_day : NUMERIC(10,2)
+    rating : NUMERIC(3,2)
+    rating_count : INT
+    fraud_score : DOUBLE
+    is_flagged : BOOLEAN
+    is_verified : BOOLEAN
+    review_status : VARCHAR(24)
+    reviewed_by : INT <<FK>>
+    reviewed_at : TIMESTAMPTZ
+    rejection_reason : TEXT
+    id_document_url : TEXT
+    background_check_status : VARCHAR(24)
+    service_area_text : TEXT
+    service_radius_km : INT
+    work_days : TEXT
+    work_start : TIME
+    work_end : TIME
+    auto_reply_templates : JSONB
+    is_available : BOOLEAN
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "sitter_services" as sitter_services {
+    *id : SERIAL <<PK>>
+    --
+    sitter_id : INT <<FK>>
+    service : VARCHAR(40)
+    price : NUMERIC(10,2)
+  }
+
+  entity "sitter_review_events" as sitter_review_events {
+    *id : SERIAL <<PK>>
+    --
+    sitter_id : INT <<FK>>
+    actor_id : INT <<FK>>
+    action : VARCHAR(40)
+    note : TEXT
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "favorite_sitters" as favorite_sitters {
+    *owner_id : INT <<PK, FK>>
+    *sitter_id : INT <<PK, FK>>
+    --
+    created_at : TIMESTAMPTZ
+  }
+}
+
+package "Care Operations" {
+  entity "pets" as pets {
+    *id : SERIAL <<PK>>
+    --
+    owner_id : INT <<FK>>
+    name : VARCHAR(80)
+    pet_type : VARCHAR(30)
+    gender : VARCHAR(10)
+    age : INT
+    size : VARCHAR(20)
+    care_type : VARCHAR(30)
+    behavior : TEXT
+    health : TEXT
+    description : TEXT
+    photo_url : TEXT
+    created_at : TIMESTAMPTZ
+    updated_at : TIMESTAMPTZ
+  }
+
+  entity "bookings" as bookings {
+    *id : SERIAL <<PK>>
+    --
+    owner_id : INT <<FK>>
+    sitter_id : INT <<FK>>
+    pet_id : INT <<FK>>
+    service : VARCHAR(40)
+    start_date : DATE
+    end_date : DATE
+    start_time : TIME
+    end_time : TIME
+    total_price : NUMERIC(10,2)
+    status : VARCHAR(20)
+    notes : TEXT
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "booking_updates" as booking_updates {
+    *id : SERIAL <<PK>>
+    --
+    booking_id : INT <<FK>>
+    sender_id : INT <<FK>>
+    update_type : VARCHAR(20)
+    body : TEXT
+    photo_url : TEXT
+    status_label : VARCHAR(120)
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "reviews" as reviews {
+    *id : SERIAL <<PK>>
+    --
+    booking_id : INT <<FK, UQ>>
+    author_id : INT <<FK>>
+    sitter_id : INT <<FK>>
+    rating : INT
+    body : TEXT
+    is_hidden : BOOLEAN
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "notification_jobs" as notification_jobs {
+    *id : SERIAL <<PK>>
+    --
+    user_id : INT <<FK>>
+    booking_id : INT <<FK>>
+    type : VARCHAR(40)
+    channel : VARCHAR(20)
+    destination : TEXT
+    title : VARCHAR(160)
+    body : TEXT
+    due_at : TIMESTAMPTZ
+    status : VARCHAR(20)
+    meta : JSONB
+    processed_at : TIMESTAMPTZ
+    created_at : TIMESTAMPTZ
+  }
+}
+
+package "Messaging, Alerts & Support" {
+  entity "messages" as messages {
+    *id : SERIAL <<PK>>
+    --
+    sender_id : INT <<FK>>
+    receiver_id : INT <<FK>>
+    body : TEXT
+    audio_url : TEXT
+    image_url : TEXT
+    file_url : TEXT
+    is_read : BOOLEAN
+    is_delivered : BOOLEAN
+    is_deleted : BOOLEAN
+    deleted_for_everyone : BOOLEAN
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "message_hidden_for_users" as message_hidden_for_users {
+    *message_id : INT <<PK, FK>>
+    *user_id : INT <<PK, FK>>
+    --
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "deleted_conversations" as deleted_conversations {
+    *user_id : INT <<PK, FK>>
+    *other_user_id : INT <<PK, FK>>
+    --
+    deleted_before : TIMESTAMPTZ
+  }
+
+  entity "notifications" as notifications {
+    *id : SERIAL <<PK>>
+    --
+    user_id : INT <<FK>>
+    type : VARCHAR(40)
+    title : VARCHAR(160)
+    body : TEXT
+    meta : JSONB
+    is_read : BOOLEAN
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "support_tickets" as support_tickets {
+    *id : SERIAL <<PK>>
+    --
+    user_id : INT <<FK>>
+    category : VARCHAR(40)
+    priority : VARCHAR(20)
+    status : VARCHAR(20)
+    subject : VARCHAR(180)
+    body : TEXT
+    assigned_admin_id : INT <<FK>>
+    ai_summary : TEXT
+    ai_suggested_category : VARCHAR(40)
+    ai_suggested_priority : VARCHAR(20)
+    ai_first_reply : TEXT
+    resolution_note : TEXT
+    created_at : TIMESTAMPTZ
+    updated_at : TIMESTAMPTZ
+  }
+}
+
+package "Commerce" {
+  entity "products" as products {
+    *id : SERIAL <<PK>>
+    --
+    title : VARCHAR(160)
+    category : VARCHAR(40)
+    description : TEXT
+    price : NUMERIC(10,2)
+    image_url : TEXT
+    stock : INT
+    is_active : BOOLEAN
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "orders" as orders {
+    *id : SERIAL <<PK>>
+    --
+    user_id : INT <<FK>>
+    total : NUMERIC(10,2)
+    status : VARCHAR(20)
+    address : VARCHAR(255)
+    customer_email : VARCHAR(160)
+    customer_name : VARCHAR(120)
+    customer_phone : VARCHAR(40)
+    payment_method : VARCHAR(40)
+    payment_status : VARCHAR(20)
+    payment_reference : VARCHAR(120)
+    payment_last4 : VARCHAR(4)
+    paid_at : TIMESTAMPTZ
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "order_items" as order_items {
+    *id : SERIAL <<PK>>
+    --
+    order_id : INT <<FK>>
+    product_id : INT <<FK>>
+    quantity : INT
+    unit_price : NUMERIC(10,2)
+  }
+}
+
+users ||--o| sitters : has sitter profile
+users ||--o{ pets : owns
+users ||--o{ bookings : owner_id
+sitters ||--o{ bookings : sitter_id
+pets ||--o{ bookings : pet_id
+sitters ||--o{ sitter_services : offers
+sitters ||--o{ reviews : receives
+sitters ||--o{ sitter_review_events : audit trail
+users ||--o{ sitter_review_events : actor_id
+users ||--o{ favorite_sitters : saves
+sitters ||--o{ favorite_sitters : favorited
+bookings ||--o{ booking_updates : has
+users ||--o{ booking_updates : sends
+bookings ||--o| reviews : reviewed by
+users ||--o{ reviews : author_id
+
+users ||--o{ messages : sender_id
+users ||--o{ messages : receiver_id
+messages ||--o{ message_hidden_for_users : hidden copy
+users ||--o{ message_hidden_for_users : hides
+users ||--o{ deleted_conversations : user_id
+users ||--o{ deleted_conversations : other_user_id
+users ||--o{ notifications : receives
+users ||--o{ notification_jobs : target user
+bookings ||--o{ notification_jobs : related booking
+users ||--o{ support_tickets : opens
+users ||--o{ support_tickets : assigned_admin_id
+
+users ||--o{ orders : places
+orders ||--|{ order_items : contains
+products ||--o{ order_items : sold in
+
+users ||--o{ sitters : reviewed_by
+
+note right of users
+All actors of the platform are stored in one table.
+Role-specific sitter data is separated into the sitters table.
+Password-reset fields are added by migration 2026-04-20.
+end note
+
+note bottom
+This ER diagram focuses only on persistent data:
+tables, keys, foreign keys and cardinalities.
+It is intentionally different from the class diagram.
+end note
+
+@enduml

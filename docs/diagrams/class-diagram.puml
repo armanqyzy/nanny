@@ -1,0 +1,513 @@
+@startuml Nanny_Class_Diagram
+title Nanny Platform - UML Class Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide circle
+
+package "Presentation & API Layer" {
+  class NannyApiServer <<application>> {
+    +listen(port)
+    +mountRoutes()
+    +registerSocketIO()
+    +startNotificationWorker()
+  }
+
+  class AuthMiddleware <<middleware>> {
+    +auth()
+    +optionalAuth()
+    +requireRole(...roles)
+  }
+
+  class ValidationMiddleware <<middleware>> {
+    +validateBody(schema)
+    +validateQuery(schema)
+    +validateParams(schema)
+  }
+
+  class AuthController <<control>> {
+    +register(req, res)
+    +login(req, res)
+    +logout(req, res)
+    +me(req, res)
+    +forgotPassword(req, res)
+    +resetPassword(req, res)
+  }
+
+  class UserController <<control>> {
+    +updateMe(req, res)
+    +getById(req, res)
+  }
+
+  class PetController <<control>> {
+    +list(req, res)
+    +create(req, res)
+    +update(req, res)
+    +remove(req, res)
+  }
+
+  class SitterController <<control>> {
+    +search(req, res)
+    +mapSearch(req, res)
+    +getOne(req, res)
+    +getAvailability(req, res)
+    +listFavorites(req, res)
+    +addFavorite(req, res)
+    +removeFavorite(req, res)
+    +updateMe(req, res)
+    +setServices(req, res)
+    +getMyVerification(req, res)
+    +updateMyVerification(req, res)
+    +getMyDashboard(req, res)
+  }
+
+  class BookingController <<control>> {
+    +create(req, res)
+    +myBookings(req, res)
+    +updateStatus(req, res)
+    +rebook(req, res)
+    -findBookingConflicts(...)
+  }
+
+  class PetUpdateController <<control>> {
+    +list(req, res)
+    +create(req, res)
+    -socketEventName(type)
+  }
+
+  class MessageController <<control>> {
+    +threads(req, res)
+    +history(req, res)
+    +send(req, res)
+    +supportContact(req, res)
+    +markDelivered(req, res)
+    +removeMessage(req, res)
+    +removeConversation(req, res)
+  }
+
+  class ReviewController <<control>> {
+    +create(req, res)
+    +listForSitter(req, res)
+  }
+
+  class ProductController <<control>> {
+    +list(req, res)
+    +getOne(req, res)
+    +create(req, res)
+    +update(req, res)
+    +remove(req, res)
+  }
+
+  class OrderController <<control>> {
+    +checkout(req, res)
+    +myOrders(req, res)
+  }
+
+  class NotificationController <<control>> {
+    +list(req, res)
+    +markRead(req, res)
+    +markAllRead(req, res)
+  }
+
+  class SupportController <<control>> {
+    +createTicket(req, res)
+    +myTickets(req, res)
+  }
+
+  class RecommendationController <<control>> {
+    +recommendations(req, res)
+    -haversineKm(...)
+  }
+
+  class AIController <<control>> {
+    +petProfileAssistant(req, res)
+    +bookingNotesAssistant(req, res)
+  }
+
+  class AdminController <<control>> {
+    +listUsers(req, res)
+    +blockUser(req, res)
+    +listPendingSitters(req, res)
+    +verifySitter(req, res)
+    +listBookings(req, res)
+    +getSitterReview(req, res)
+    +updateSitterReview(req, res)
+    +reviewOverview(req, res)
+    +listProducts(req, res)
+    +listOrders(req, res)
+    +updateOrderStatus(req, res)
+    +moderateReview(req, res)
+    +listSupportTickets(req, res)
+    +updateSupportTicket(req, res)
+    +stats(req, res)
+  }
+
+  class UploadController <<control>> {
+    +uploadDocument(req, res)
+    -sanitizeBaseName(filename)
+    -extensionFromMime(mimeType)
+  }
+
+  class ChatSocketGateway <<gateway>> {
+    +registerChat(io)
+    +emitPresence(io, userId, online)
+    +isUserOnline(io, userId)
+    -handlePetEvent(payload, ack, expectedType)
+  }
+}
+
+package "Service & Infrastructure Layer" {
+  class PostgresDb <<infrastructure>> {
+    +query(sql, params)
+    +pool.connect()
+  }
+
+  class JwtUtil <<utility>> {
+    +getJwtSecret()
+    +signToken(user)
+    +verifyToken(token)
+  }
+
+  class FraudUtil <<utility>> {
+    +computeFraudScore(input)
+    +recalculateSitterFraudScore(sitterId)
+    -clamp(value, min, max)
+  }
+
+  class MessageService <<service>> {
+    +createMessage(data)
+    +getThreads(userId)
+    +getConversationHistory(userId, otherId)
+    +markConversationDelivered(userId, otherId)
+    +markConversationRead(userId, otherId)
+    +markMessageDelivered(messageId, userId)
+    +deleteMessageForSelf(messageId, userId)
+    +deleteMessageForEveryone(messageId, userId)
+    +deleteConversation(userId, otherId)
+  }
+
+  class PetUpdateService <<service>> {
+    +getBookingAudience(bookingId)
+    +createBookingUpdate(data)
+    +listBookingUpdates(bookingId, userId)
+  }
+
+  class NotificationService <<service>> {
+    +createNotification(data)
+    +listNotifications(userId)
+    +readNotification(userId, notificationId)
+    +readAllNotifications(userId)
+  }
+
+  class AlertService <<service>> {
+    +notifyUser(userId, payload)
+    +queueBookingReminder(data)
+    +clearBookingReminderJobs(bookingId)
+    +processDueNotificationJobs(io)
+    +startNotificationWorker(io)
+  }
+
+  class EmailService <<service>> {
+    +sendOrderConfirmationEmail(data)
+    +sendPlainEmail(data)
+    -buildTransport()
+  }
+
+  class PaymentService <<service>> {
+    +validatePaymentCard(card)
+    +detectCardBrand(cardNumber)
+    +chargeCard(data)
+    -luhnCheck(cardNumber)
+    -isFutureExpiry(month, year)
+  }
+
+  class OpenAIService <<ai_service>> {
+    +generatePetProfileDraft(payload)
+    +generateBookingNotesDraft(payload)
+    +generateRecommendationExplanation(payload)
+    +triageSupportTicket(payload)
+    -createOpenAIResponse(data)
+  }
+}
+
+package "Domain Model" {
+  enum UserRole {
+    owner
+    sitter
+    admin
+  }
+
+  enum BookingStatus {
+    pending
+    confirmed
+    completed
+    cancelled
+  }
+
+  enum ReviewStatus {
+    new
+    in_review
+    approved
+    changes_requested
+    rejected
+  }
+
+  enum TicketStatus {
+    open
+    in_progress
+    resolved
+    closed
+  }
+
+  abstract class User <<entity>> {
+    +id: int
+    +fullName: string
+    +email: string
+    +phone: string
+    +role: UserRole
+    +avatarUrl: string
+    +address: string
+    +isBlocked: boolean
+  }
+
+  class Owner <<entity>>
+  class SitterUser <<entity>>
+  class Admin <<entity>>
+
+  class SitterProfile <<entity>> {
+    +id: int
+    +description: text
+    +experienceYrs: int
+    +city: string
+    +district: string
+    +pricePerDay: decimal
+    +rating: decimal
+    +ratingCount: int
+    +fraudScore: float
+    +isVerified: boolean
+    +reviewStatus: ReviewStatus
+    +backgroundCheckStatus: string
+    +serviceRadiusKm: int
+    +isAvailable: boolean
+  }
+
+  class ServiceOffer <<entity>> {
+    +service: string
+    +price: decimal
+  }
+
+  class Pet <<entity>> {
+    +id: int
+    +name: string
+    +petType: string
+    +age: int
+    +size: string
+    +careType: string
+    +behavior: text
+    +health: text
+  }
+
+  class Booking <<entity>> {
+    +id: int
+    +service: string
+    +startDate: date
+    +endDate: date
+    +startTime: time
+    +endTime: time
+    +totalPrice: decimal
+    +status: BookingStatus
+    +notes: text
+  }
+
+  class BookingUpdate <<entity>> {
+    +id: int
+    +updateType: string
+    +body: text
+    +photoUrl: string
+    +statusLabel: string
+    +createdAt: datetime
+  }
+
+  class Message <<entity>> {
+    +id: int
+    +body: text
+    +audioUrl: string
+    +imageUrl: string
+    +fileUrl: string
+    +isRead: boolean
+    +isDelivered: boolean
+    +isDeleted: boolean
+  }
+
+  class Review <<entity>> {
+    +id: int
+    +rating: int
+    +body: text
+    +isHidden: boolean
+    +createdAt: datetime
+  }
+
+  class Notification <<entity>> {
+    +id: int
+    +type: string
+    +title: string
+    +body: text
+    +isRead: boolean
+    +meta: json
+  }
+
+  class SupportTicket <<entity>> {
+    +id: int
+    +category: string
+    +priority: string
+    +status: TicketStatus
+    +subject: string
+    +body: text
+    +aiSummary: text
+  }
+
+  class Product <<entity>> {
+    +id: int
+    +title: string
+    +category: string
+    +price: decimal
+    +stock: int
+    +isActive: boolean
+  }
+
+  class Order <<entity>> {
+    +id: int
+    +total: decimal
+    +status: string
+    +paymentStatus: string
+    +paymentReference: string
+    +customerEmail: string
+    +address: string
+  }
+
+  class OrderItem <<entity>> {
+    +id: int
+    +quantity: int
+    +unitPrice: decimal
+  }
+}
+
+User <|-- Owner
+User <|-- SitterUser
+User <|-- Admin
+SitterUser "1" *-- "1" SitterProfile : owns
+SitterProfile "1" *-- "0..*" ServiceOffer : offers
+Owner "1" -- "0..*" Pet : owns
+Owner "1" -- "0..*" Booking : places
+SitterProfile "1" -- "0..*" Booking : accepts
+Pet "1" -- "0..*" Booking : booked_for
+Booking "1" *-- "0..*" BookingUpdate : contains
+Booking "1" -- "0..1" Review : review
+SitterProfile "1" -- "0..*" Review : receives
+User "1" -- "0..*" Message : participates_in
+User "1" -- "0..*" Notification : receives
+User "1" -- "0..*" SupportTicket : creates
+User "1" -- "0..*" Order : places
+Order "1" *-- "1..*" OrderItem : contains
+OrderItem "0..*" --> "1" Product : product
+Owner "0..*" --> "0..*" SitterProfile : favorites
+
+NannyApiServer ..> AuthMiddleware
+NannyApiServer ..> ValidationMiddleware
+NannyApiServer ..> ChatSocketGateway
+NannyApiServer ..> AuthController
+NannyApiServer ..> SitterController
+NannyApiServer ..> BookingController
+NannyApiServer ..> MessageController
+NannyApiServer ..> OrderController
+NannyApiServer ..> AdminController
+
+AuthController ..> PostgresDb
+AuthController ..> JwtUtil
+AuthController ..> EmailService
+AuthController ..> FraudUtil
+AuthController ..> User
+
+UserController ..> User
+
+PetController ..> Pet
+
+SitterController ..> FraudUtil
+SitterController ..> SitterProfile
+SitterController ..> ServiceOffer
+
+BookingController ..> AlertService
+BookingController ..> Booking
+BookingController ..> Pet
+BookingController ..> SitterProfile
+
+PetUpdateController ..> PetUpdateService
+
+MessageController ..> MessageService
+MessageController ..> AlertService
+MessageController ..> ChatSocketGateway
+
+ReviewController ..> NotificationService
+ReviewController ..> FraudUtil
+ReviewController ..> Review
+ReviewController ..> Booking
+
+ProductController ..> Product
+
+OrderController ..> PaymentService
+OrderController ..> EmailService
+OrderController ..> AlertService
+OrderController ..> Order
+OrderController ..> Product
+
+NotificationController ..> NotificationService
+
+SupportController ..> OpenAIService
+SupportController ..> AlertService
+SupportController ..> SupportTicket
+
+RecommendationController ..> OpenAIService
+RecommendationController ..> Pet
+RecommendationController ..> SitterProfile
+
+AIController ..> OpenAIService
+AdminController ..> AlertService
+AdminController ..> User
+AdminController ..> SitterProfile
+AdminController ..> Order
+AdminController ..> SupportTicket
+
+ChatSocketGateway ..> JwtUtil
+ChatSocketGateway ..> MessageService
+ChatSocketGateway ..> PetUpdateService
+ChatSocketGateway ..> NotificationService
+
+MessageService ..> PostgresDb
+MessageService ..> Message
+
+PetUpdateService ..> PostgresDb
+PetUpdateService ..> Booking
+PetUpdateService ..> BookingUpdate
+
+NotificationService ..> PostgresDb
+NotificationService ..> Notification
+
+AlertService ..> NotificationService
+AlertService ..> EmailService
+
+PaymentService ..> Order
+OpenAIService ..> Pet
+OpenAIService ..> Booking
+OpenAIService ..> SupportTicket
+FraudUtil ..> SitterProfile
+FraudUtil ..> PostgresDb
+
+note bottom
+This diagram intentionally models the application architecture:
+controllers, services, middleware, socket gateway and domain classes.
+It is not a copy of the database schema.
+end note
+
+@enduml
