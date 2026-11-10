@@ -30,7 +30,7 @@ const authSchemas = {
   register: z.object({
     full_name: z.string().trim().min(2).max(120),
     email: emailSchema,
-    phone: phoneSchema.optional(),
+    phone: phoneSchema.optional().or(z.literal('')),
     password: passwordSchema,
     role: z.enum(['owner', 'sitter']).optional(),
   }),

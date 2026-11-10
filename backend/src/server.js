@@ -28,6 +28,9 @@ const { apiRateLimit } = require('./middleware/rateLimit');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
+
+// Render and other hosts put a proxy in front of the app; trust it so req.ip is the real client IP
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const localDevOrigins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'];

@@ -15,6 +15,10 @@ DROP TABLE IF EXISTS bookings CASCADE;
 DROP TABLE IF EXISTS sitter_services CASCADE;
 DROP TABLE IF EXISTS sitters CASCADE;
 DROP TABLE IF EXISTS pets CASCADE;
+DROP TABLE IF EXISTS support_tickets CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS deleted_conversations CASCADE;
+DROP TABLE IF EXISTS message_hidden_for_users CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- ------------------------------------------------------------
