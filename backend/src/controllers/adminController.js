@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { expireStalePendingBookings } = require('./bookingController');
 const { notifyUser } = require('../services/alertService');
 
 async function listUsers(_req, res) {
@@ -10,6 +11,15 @@ async function listUsers(_req, res) {
 
 async function blockUser(req, res) {
   const { blocked = true } = req.body;
+  const targetId = Number(req.params.id);
+  if (blocked && targetId === req.user.id) {
+    return res.status(400).json({ error: 'You cannot block your own account' });
+  }
+  const { rows: targetRows } = await db.query('SELECT role FROM users WHERE id = $1', [targetId]);
+  if (!targetRows[0]) return res.status(404).json({ error: 'User not found' });
+  if (blocked && targetRows[0].role === 'admin') {
+    return res.status(400).json({ error: 'Admin accounts cannot be blocked from the panel' });
+  }
   const { rows } = await db.query(
     'UPDATE users SET is_blocked=$1 WHERE id=$2 RETURNING id, full_name, is_blocked',
     [blocked, req.params.id]
@@ -68,6 +78,7 @@ async function verifySitter(req, res) {
 }
 
 async function listBookings(_req, res) {
+  await expireStalePendingBookings();
   const { rows } = await db.query(
     `SELECT b.*, p.name AS pet_name, ou.full_name AS owner_name, su.full_name AS sitter_name
        FROM bookings b

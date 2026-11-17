@@ -441,14 +441,18 @@ export default function Dashboard() {
       try {
         const me = await api.get('/api/auth/me');
         setUser(me); setForm(me);
-        const p  = await api.get('/api/pets').catch(() => []);
+        // Pets, recommendations and favorites exist only for owners; other roles get 403 there.
+        const isOwner = me.role === 'owner';
+        const p  = isOwner ? await api.get('/api/pets').catch(() => []) : [];
         setPets(p);
         const b  = await api.get('/api/bookings/mine').catch(() => ({ asOwner: [], asSitter: [] }));
         setBook(b);
-        const rec = await api.get('/api/recommendations').catch(() => ({ recommendations: [], pet: null }));
+        const rec = isOwner
+          ? await api.get('/api/recommendations').catch(() => ({ recommendations: [], pet: null }))
+          : { recommendations: [], pet: null };
         setRecommendations(rec.recommendations || []);
         setRecommendationPet(rec.pet || null);
-        const fav = await api.get('/api/sitters/favorites').catch(() => []);
+        const fav = isOwner ? await api.get('/api/sitters/favorites').catch(() => []) : [];
         setFavorites(fav);
         if (me.role === 'sitter') {
           const dashboardData = await api.get('/api/sitters/me/dashboard').catch(() => null);

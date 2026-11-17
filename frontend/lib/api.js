@@ -40,7 +40,13 @@ async function request(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (res.status === 403 && data?.error === 'Account is blocked' && typeof window !== 'undefined') {
+    // The account was blocked by an admin: end the session right away.
+    clearSession();
+    window.location.href = '/login';
+  }
   if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
   return data;
 }

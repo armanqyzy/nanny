@@ -226,11 +226,17 @@ export default function Navbar() {
           {/* Phones: the desktop links and the sidebar are hidden, so show a scrollable link row instead. */}
           <div className="-mx-6 mt-3 flex gap-2 overflow-x-auto px-6 pb-1 text-sm font-medium md:hidden">
             {[
-              ...(user ? [
+              ...(user?.role === 'admin' ? [
+                ['/admin', t('shell', 'admin', 'Admin')],
+                ['/calendar', t('shell', 'calendar', 'Calendar')],
+                ['/shop/orders', t('shell', 'shopOrders', 'Shop orders')],
+              ] : []),
+              ...(user && user.role !== 'admin' ? [
                 ['/dashboard', t('shell', 'overview', 'Overview')],
-                ['/pets', t('shell', 'pets', 'Pets')],
+                ...(user.role === 'owner' ? [['/pets', t('shell', 'pets', 'Pets')]] : []),
                 ['/bookings', t('shell', 'bookings', 'Bookings')],
                 ['/calendar', t('shell', 'calendar', 'Calendar')],
+                ...(user.role === 'sitter' ? [['/verification', t('shell', 'verification', 'Verification')]] : []),
               ] : []),
               ['/sitters', t('shell', 'sitters', 'Sitters')],
               ['/map', t('shell', 'map', 'Map')],

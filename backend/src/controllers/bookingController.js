@@ -159,7 +159,19 @@ async function create(req, res) {
   res.status(201).json(rows[0]);
 }
 
+// Requests nobody confirmed before their last day can never happen any more.
+async function expireStalePendingBookings() {
+  await db.query(
+    `UPDATE bookings
+        SET status = 'cancelled'
+      WHERE status = 'pending'
+        AND end_date < $1::date`,
+    [todayInAppTimeZone()]
+  );
+}
+
 async function myBookings(req, res) {
+  await expireStalePendingBookings();
   // as owner
   const owner = await db.query(
     `SELECT b.*, p.name AS pet_name, u.full_name AS sitter_name, u.avatar_url AS sitter_avatar,
@@ -381,4 +393,4 @@ async function rebook(req, res) {
   res.status(201).json(rows[0]);
 }
 
-module.exports = { create, myBookings, updateStatus, rebook };
+module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings };

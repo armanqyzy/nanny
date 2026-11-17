@@ -512,6 +512,7 @@ export default function Chat() {
                 />
               </div>
 
+              {me?.role !== 'admin' && (
               <button
                 onClick={openSupportChat}
                 className="mt-4 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-nanny-blue to-[#6282ff] px-4 py-3 text-left text-white shadow-sm transition hover:translate-y-[-1px]"
@@ -523,6 +524,7 @@ export default function Chat() {
                 </span>
                 <Icon name="support" className="h-5 w-5" />
               </button>
+              )}
             </div>
           </div>
 

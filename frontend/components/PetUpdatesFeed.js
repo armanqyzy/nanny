@@ -11,6 +11,18 @@ const UPDATE_STYLES = {
   status: 'bg-green-50 text-green-700 border-green-100',
 };
 
+// Correct word form for the update counter in each language.
+function countWord(n, language) {
+  if (language === 'ru') {
+    const mod10 = n % 10; const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'обновление';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'обновления';
+    return 'обновлений';
+  }
+  if (language === 'kz') return 'жаңарту';
+  return n === 1 ? 'update' : 'updates';
+}
+
 export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
   const { language } = useLanguage();
   const [updates, setUpdates] = useState([]);
@@ -191,7 +203,7 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
           <h4 className="font-bold text-nanny-deepOrange">{title}</h4>
           <p className="text-xs opacity-70">{t.subtitle || 'Text notes, status changes and photo updates in real time.'}</p>
         </div>
-        <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{sortedUpdates.length} {t.updatesCount || 'updates'}</span>
+        <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{sortedUpdates.length} {countWord(sortedUpdates.length, language)}</span>
       </div>
 
       {canSend && (

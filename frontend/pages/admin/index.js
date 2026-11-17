@@ -589,9 +589,9 @@ export default function Admin() {
                     </span>
                   </td>
                   <td>
-                    <button onClick={() => toggleBlock(u.id, u.is_blocked)} className="btn-ghost text-xs">
+                    {u.role !== 'admin' && <button onClick={() => toggleBlock(u.id, u.is_blocked)} className="btn-ghost text-xs">
                       {u.is_blocked ? (language === 'ru' ? 'Разблокировать' : language === 'kz' ? 'Бұғаттан шығару' : 'Unblock') : (language === 'ru' ? 'Заблокировать' : language === 'kz' ? 'Бұғаттау' : 'Block')}
-                    </button>
+                    </button>}
                   </td>
                 </tr>
               ))}

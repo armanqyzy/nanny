@@ -7,6 +7,7 @@ const {
 } = require('../services/messageService');
 const { createNotification } = require('../services/notificationService');
 const db = require('../config/db');
+const { isUserBlocked } = require('../middleware/auth');
 
 function emitPresence(io, userId, online) {
   io.emit('presence:update', { user_id: userId, online });
@@ -22,13 +23,19 @@ function registerChat(io) {
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('No token'));
+    let payload;
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      socket.user = payload;
-      next();
+      payload = jwt.verify(token, process.env.JWT_SECRET);
     } catch {
-      next(new Error('Invalid token'));
+      return next(new Error('Invalid token'));
     }
+    isUserBlocked(payload.id)
+      .then((blocked) => {
+        if (blocked) return next(new Error('Account is blocked'));
+        socket.user = payload;
+        return next();
+      })
+      .catch(() => next(new Error('Auth check failed')));
   });
 
   io.on('connection', (socket) => {
