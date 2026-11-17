@@ -80,6 +80,8 @@ const bookingSchemas = {
   }),
   status: z.object({
     status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']),
+    reason: z.string().trim().max(40).optional(),
+    comment: z.string().trim().max(500).optional(),
   }),
   availabilityQuery: z.object({
     start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

@@ -10,6 +10,8 @@ import PaymentCardForm from '../../components/PaymentCardForm';
 import { EMPTY_CARD, friendlyPaymentError, toPaymentPayload, validateCard } from '../../lib/payment';
 import ReportModal from '../../components/ReportModal';
 import EmptyState from '../../components/EmptyState';
+import CancelBookingModal from '../../components/CancelBookingModal';
+import { POLICY_TEXT, cancelReasonLabel } from '../../lib/cancellation';
 import { localeFor, serviceName } from '../../lib/services';
 
 const EMPTY_PAYMENT = EMPTY_CARD;
@@ -21,6 +23,8 @@ function payText(language, key) {
     paid: { en: 'Paid', ru: 'Оплачено', kz: 'Төленді' },
     unpaid: { en: 'Not paid yet', ru: 'Ещё не оплачено', kz: 'Әлі төленбеген' },
     refunded: { en: 'Refunded', ru: 'Возвращено', kz: 'Қайтарылды' },
+    partiallyRefunded: { en: 'Partly refunded', ru: 'Возвращено частично', kz: 'Ішінара қайтарылды' },
+    noRefund: { en: 'Paid, no refund', ru: 'Оплачено, без возврата', kz: 'Төленді, қайтарылмайды' },
     payAfterConfirm: { en: 'Payment opens after the sitter confirms', ru: 'Оплата откроется после подтверждения ситтером', kz: 'Ситтер растағаннан кейін төлеуге болады' },
     title: { en: 'Pay for booking', ru: 'Оплата бронирования', kz: 'Брондауды төлеу' },
     demo: {
@@ -70,6 +74,7 @@ export default function Bookings() {
   const router = useRouter();
   const reviewFromQuery = router.query.review;
   const [data, setData] = useState({ asOwner: [], asSitter: [] });
+  const [cancelBooking, setCancelBooking] = useState(null);
   const [viewerRole, setViewerRole] = useState('');
   useEffect(() => { setViewerRole(currentUser()?.role || ''); }, []);
   const isSitterViewer = viewerRole === 'sitter';
@@ -340,9 +345,38 @@ export default function Bookings() {
             </div>
           </div>
 
-          {b.status !== 'cancelled' || b.payment_status === 'refunded' ? (
+          {b.status === 'cancelled' && b.cancel_reason && (
+            <div className="mt-3 rounded-2xl border border-red-100 bg-red-50/60 px-4 py-3 text-sm text-nanny-brownish">
+              <p>
+                <span className="font-semibold">
+                  {b.cancelled_by === 'system'
+                    ? (language === 'ru' ? 'Отменено автоматически' : language === 'kz' ? 'Автоматты түрде тоқтатылды' : 'Cancelled automatically')
+                    : b.cancelled_by === role
+                      ? (language === 'ru' ? 'Вы отменили' : language === 'kz' ? 'Сіз бас тарттыңыз' : 'You cancelled')
+                      : b.cancelled_by === 'sitter'
+                        ? (language === 'ru' ? 'Отменил ситтер' : language === 'kz' ? 'Ситтер бас тартты' : 'Cancelled by the sitter')
+                        : (language === 'ru' ? 'Отменил владелец' : language === 'kz' ? 'Иесі бас тартты' : 'Cancelled by the owner')}
+                </span>
+                {': '}{cancelReasonLabel(b.cancel_reason, language)}
+              </p>
+              {b.cancel_comment && <p className="mt-1 opacity-80">«{b.cancel_comment}»</p>}
+              {b.refund_percent != null && (
+                <p className="mt-1 opacity-80">
+                  {language === 'ru' ? 'Возврат' : language === 'kz' ? 'Қайтару' : 'Refund'}: {b.refund_percent}% ({Number(b.refund_amount).toLocaleString()} ₸)
+                </p>
+              )}
+            </div>
+          )}
+
+          {b.status !== 'cancelled' || ['refunded', 'partially_refunded', 'paid'].includes(b.payment_status) ? (
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-              {b.payment_status === 'paid' && (
+              {b.payment_status === 'partially_refunded' && (
+                <span className="badge bg-nanny-blue/10 text-nanny-blue">{payText(language, 'partiallyRefunded')}</span>
+              )}
+              {b.payment_status === 'paid' && b.status === 'cancelled' && (
+                <span className="badge bg-red-50 text-red-600">{payText(language, 'noRefund')}</span>
+              )}
+              {b.payment_status === 'paid' && b.status !== 'cancelled' && (
                 <span className="badge bg-green-100 text-green-700">✓ {payText(language, 'paid')}{b.payment_last4 ? ` •••• ${b.payment_last4}` : ''}</span>
               )}
               {b.payment_status === 'refunded' && (
@@ -397,7 +431,7 @@ export default function Bookings() {
               <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'completed')} className="btn-secondary text-sm">{t.markCompleted || 'Mark completed'}</button>
             )}
             {['pending', 'confirmed'].includes(b.status) && (
-              <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'cancelled')} className="btn-ghost text-sm text-red-600">{t.cancel || 'Cancel'}</button>
+              <button disabled={busyBookingId === b.id} onClick={() => setCancelBooking(b)} className="btn-ghost text-sm text-red-600">{t.cancel || 'Cancel'}</button>
             )}
           </div>
 
@@ -541,6 +575,15 @@ export default function Bookings() {
       )}
       </div>
 
+      {cancelBooking && (
+        <CancelBookingModal
+          booking={cancelBooking}
+          language={language}
+          onClose={() => setCancelBooking(null)}
+          onCancelled={() => { setCancelBooking(null); reload(); }}
+        />
+      )}
+
       {reviewBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={() => setReviewBooking(null)}>
           <div className="w-full max-w-xl rounded-[28px] bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -615,6 +658,14 @@ export default function Bookings() {
             <div className="mt-4">
               <PaymentCardForm value={payForm} onChange={setPayForm} language={language} showAllErrors={payAttempted} />
             </div>
+            <details className="mt-4 rounded-2xl border border-nanny-orange/15 bg-nanny-cream/45 px-4 py-3 text-sm">
+              <summary className="cursor-pointer font-semibold text-nanny-deepOrange">
+                {language === 'ru' ? 'Правила отмены и возврата' : language === 'kz' ? 'Бас тарту және қайтару ережелері' : 'Cancellation and refund rules'}
+              </summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 opacity-80">
+                {(POLICY_TEXT[language] || POLICY_TEXT.en).map((line) => <li key={line}>{line}</li>)}
+              </ul>
+            </details>
             {payError && <p className="mt-3 text-sm text-red-600">{payError}</p>}
             <div className="mt-5 flex gap-2">
               <button type="button" className="btn-ghost flex-1" disabled={paying} onClick={() => setPayBooking(null)}>{payText(language, 'cancel')}</button>

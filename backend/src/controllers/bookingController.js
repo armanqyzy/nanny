@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { notifyUser, queueBookingReminder, clearBookingReminderJobs } = require('../services/alertService');
 const { chargeCard } = require('../services/paymentService');
 const { findDaysOffInRange } = require('./sitterController');
+const { OWNER_REASONS, SITTER_REASONS, refundFor, paymentStatusAfterRefund } = require('../services/cancellationPolicy');
 
 function overlapsTime(startA, endA, startB, endB) {
   if (!startA || !endA || !startB || !endB) return true;
@@ -216,7 +217,7 @@ async function create(req, res) {
 async function expireStalePendingBookings() {
   await db.query(
     `UPDATE bookings
-        SET status = 'cancelled'
+        SET status = 'cancelled', cancelled_by = 'system', cancel_reason = 'expired', cancelled_at = NOW()
       WHERE status = 'pending'
         AND end_date < $1::date`,
     [todayInAppTimeZone()]
@@ -318,14 +319,52 @@ async function updateStatus(req, res) {
     return res.status(400).json({ error: 'A booking cannot be completed before it starts.' });
   }
 
-  const { rows } = await db.query(
-    `UPDATE bookings
-        SET status = $1::varchar,
-            payment_status = CASE WHEN $1::varchar = 'cancelled' AND payment_status = 'paid' THEN 'refunded' ELSE payment_status END
-      WHERE id = $2
-     RETURNING *`,
-    [status, req.params.id]
-  );
+  let rows;
+  if (status === 'cancelled') {
+    const reasons = actor === 'sitter' ? SITTER_REASONS : OWNER_REASONS;
+    const reason = req.body.reason;
+    const comment = (req.body.comment || '').trim();
+    if (!reason || !reasons.includes(reason)) {
+      return res.status(400).json({ error: 'Please choose a cancellation reason.' });
+    }
+    if (reason === 'other' && comment.length < 3) {
+      return res.status(400).json({ error: 'Please describe the reason in a few words.' });
+    }
+    const refund = refundFor({
+      actor,
+      paymentStatus: booking.payment_status,
+      totalPrice: booking.total_price,
+      startDate: toDateString(booking.start_date),
+      today: todayInAppTimeZone(),
+    });
+    ({ rows } = await db.query(
+      `UPDATE bookings
+          SET status = 'cancelled',
+              cancelled_by = $2,
+              cancel_reason = $3,
+              cancel_comment = NULLIF($4, ''),
+              cancelled_at = NOW(),
+              refund_percent = $5,
+              refund_amount = $6,
+              payment_status = $7
+        WHERE id = $1
+       RETURNING *`,
+      [
+        req.params.id,
+        actor,
+        reason,
+        comment,
+        refund.paid ? refund.percent : null,
+        refund.paid ? refund.amount : null,
+        refund.paid ? paymentStatusAfterRefund(refund.percent) : booking.payment_status,
+      ]
+    ));
+  } else {
+    ({ rows } = await db.query(
+      `UPDATE bookings SET status = $1::varchar WHERE id = $2 RETURNING *`,
+      [status, req.params.id]
+    ));
+  }
 
   const { rows: detailsRows } = await db.query(
     `SELECT b.id, b.owner_id, b.status, b.service, p.name AS pet_name,
@@ -361,17 +400,35 @@ async function updateStatus(req, res) {
       startTime: rows[0].start_time,
     });
   }
-  if (details && status === 'cancelled' && req.user.id === details.sitter_user_id) {
-    await notifyUser({
-      userId: details.owner_id,
-      type: 'booking_rejected',
-      title: 'Sitter declined booking',
-      body: `${details.sitter_name} declined your booking request for ${details.pet_name}.`,
-      meta: { booking_id: details.id },
-      emailSubject: 'Your booking was declined',
-      emailText: `${details.sitter_name} declined your booking request for ${details.pet_name}. You can choose another sitter in Nanny.`,
-      smsText: `Nanny: ${details.sitter_name} declined booking for ${details.pet_name}.`,
-    }, { io });
+  if (details && status === 'cancelled') {
+    const updated = rows[0];
+    const reasonText = updated.cancel_comment ? `${updated.cancel_reason.replace(/_/g, ' ')}: ${updated.cancel_comment}` : updated.cancel_reason.replace(/_/g, ' ');
+    const refundText = updated.refund_percent != null
+      ? ` Refund: ${updated.refund_percent}% (${Number(updated.refund_amount).toLocaleString('en-US')} KZT).`
+      : '';
+    if (actor === 'sitter') {
+      await notifyUser({
+        userId: details.owner_id,
+        type: 'booking_rejected',
+        title: 'Sitter cancelled booking',
+        body: `${details.sitter_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.${refundText}`,
+        meta: { booking_id: details.id },
+        emailSubject: 'Your booking was cancelled by the sitter',
+        emailText: `${details.sitter_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.${refundText} You can choose another sitter in Nanny.`,
+        smsText: `Nanny: ${details.sitter_name} cancelled booking for ${details.pet_name}.`,
+      }, { io });
+    } else {
+      await notifyUser({
+        userId: details.sitter_user_id,
+        type: 'booking_cancelled',
+        title: 'Owner cancelled booking',
+        body: `${details.owner_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.`,
+        meta: { booking_id: details.id },
+        emailSubject: 'A booking was cancelled',
+        emailText: `${details.owner_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.`,
+        smsText: `Nanny: ${details.owner_name} cancelled booking for ${details.pet_name}.`,
+      }, { io });
+    }
     await clearBookingReminderJobs(details.id);
   }
   res.json(rows[0]);
@@ -501,4 +558,36 @@ async function pay(req, res) {
   res.json(updated[0]);
 }
 
-module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings, pay };
+// Shows what a cancellation would mean before the user confirms it.
+async function cancelPreview(req, res) {
+  const { rows } = await db.query(
+    `SELECT b.*, s.user_id AS sitter_user_id
+       FROM bookings b
+       JOIN sitters s ON s.id = b.sitter_id
+      WHERE b.id = $1`,
+    [req.params.id]
+  );
+  const booking = rows[0];
+  if (!booking || (booking.owner_id !== req.user.id && booking.sitter_user_id !== req.user.id)) {
+    return res.status(404).json({ error: 'Booking not found or not yours' });
+  }
+  const actor = booking.sitter_user_id === req.user.id ? 'sitter' : 'owner';
+  const refund = refundFor({
+    actor,
+    paymentStatus: booking.payment_status,
+    totalPrice: booking.total_price,
+    startDate: toDateString(booking.start_date),
+    today: todayInAppTimeZone(),
+  });
+  res.json({
+    actor,
+    reasons: actor === 'sitter' ? SITTER_REASONS : OWNER_REASONS,
+    paid: refund.paid,
+    refund_percent: refund.percent,
+    refund_amount: refund.amount,
+    total_price: Number(booking.total_price),
+    days_before: refund.daysBefore,
+  });
+}
+
+module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings, pay, cancelPreview };
