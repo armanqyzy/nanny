@@ -3,6 +3,8 @@ import VoiceRecorder from './VoiceRecorder';
 import Icon from './Icon';
 import { useLanguage } from '../lib/i18n';
 
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -17,6 +19,7 @@ export default function ChatInput({ disabled, onSend, onTyping }) {
   const t = {
     en: {
       couldNotRead: 'Could not read file.',
+      tooLarge: 'File is too large. Maximum size is 5 MB.',
       couldNotSend: 'Could not send message.',
       imagePreview: 'Image preview',
       attachedFile: 'Attached file',
@@ -28,6 +31,7 @@ export default function ChatInput({ disabled, onSend, onTyping }) {
     },
     ru: {
       couldNotRead: 'Не удалось прочитать файл.',
+      tooLarge: 'Файл слишком большой. Максимум 5 МБ.',
       couldNotSend: 'Не удалось отправить сообщение.',
       imagePreview: 'Превью изображения',
       attachedFile: 'Прикреплённый файл',
@@ -39,6 +43,7 @@ export default function ChatInput({ disabled, onSend, onTyping }) {
     },
     kz: {
       couldNotRead: 'Файлды оқу мүмкін болмады.',
+      tooLarge: 'Файл тым үлкен. Ең көбі 5 МБ.',
       couldNotSend: 'Хабарламаны жіберу мүмкін болмады.',
       imagePreview: 'Сурет превьюі',
       attachedFile: 'Тіркелген файл',
@@ -60,6 +65,11 @@ export default function ChatInput({ disabled, onSend, onTyping }) {
   async function handleFileChange(event) {
     const selected = event.target.files?.[0];
     if (!selected) return;
+    if (selected.size > MAX_ATTACHMENT_BYTES) {
+      setError(t.tooLarge || 'File is too large. Maximum size is 5 MB.');
+      event.target.value = '';
+      return;
+    }
 
     try {
       const dataUrl = await readFileAsDataUrl(selected);
@@ -121,6 +131,7 @@ export default function ChatInput({ disabled, onSend, onTyping }) {
             <div className="rounded-2xl border border-nanny-orange/20 bg-white p-3">
               <div className="mb-2 text-xs font-semibold opacity-70">{image.name || t.imagePreview || 'Image preview'}</div>
               <img src={image.image_url} alt="Preview" className="max-h-40 rounded-2xl object-cover" />
+              <button type="button" className="mt-2 text-sm font-semibold text-red-600" onClick={() => setImage(null)}>{t.remove || 'Remove'}</button>
             </div>
           )}
           {file && (

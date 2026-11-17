@@ -30,7 +30,16 @@ function asSupportThread(thread) {
   };
 }
 
-function formatDayLabel(value) {
+const DAY_WORDS = {
+  en: { today: 'Today', yesterday: 'Yesterday', locale: 'en-US' },
+  ru: { today: 'Сегодня', yesterday: 'Вчера', locale: 'ru-RU' },
+  kz: { today: 'Бүгін', yesterday: 'Кеше', locale: 'kk-KZ' },
+};
+
+const SEND_TIMEOUT_MS = 15000;
+
+function formatDayLabel(value, language = 'en') {
+  const words = DAY_WORDS[language] || DAY_WORDS.en;
   const date = new Date(value);
   const today = new Date();
   const yesterday = new Date();
@@ -41,12 +50,12 @@ function formatDayLabel(value) {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
 
-  if (isSameDay(date, today)) return 'Today';
-  if (isSameDay(date, yesterday)) return 'Yesterday';
-  return date.toLocaleDateString([], { day: '2-digit', month: 'long', year: 'numeric' });
+  if (isSameDay(date, today)) return words.today;
+  if (isSameDay(date, yesterday)) return words.yesterday;
+  return date.toLocaleDateString(words.locale, { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-function buildTimeline(messages) {
+function buildTimeline(messages, language) {
   const items = [];
   let previousDay = null;
 
@@ -57,7 +66,7 @@ function buildTimeline(messages) {
       items.push({
         type: 'day',
         key: `day-${currentDay}`,
-        label: formatDayLabel(message.created_at),
+        label: formatDayLabel(message.created_at, language),
       });
       previousDay = currentDay;
     }
@@ -95,6 +104,9 @@ export default function Chat() {
   const [supportLoading, setSupportLoading] = useState(false);
   const [deleteChatOpen, setDeleteChatOpen] = useState(false);
   const [deletingChat, setDeletingChat] = useState(false);
+  const [chatError, setChatError] = useState('');
+  // On phones only one panel fits: the conversation list or the open chat.
+  const [mobileShowList, setMobileShowList] = useState(true);
   const socketRef = useRef(null);
   const activeRef = useRef(null);
   const meRef = useRef(null);
@@ -151,7 +163,11 @@ export default function Chat() {
       });
 
       if (message.sender_id === activeRef.current?.id) {
-        socket.emit('message:delivered', { message_id: message.id });
+        setTyping(false);
+        // The chat is open, so the message is read right away; refresh the list after that.
+        socket.emit('message:read', { other_id: message.sender_id });
+        setTimeout(loadThreads, 400);
+        return;
       }
 
       loadThreads();
@@ -194,7 +210,10 @@ export default function Chat() {
   }, [me]);
 
   useEffect(() => {
+    setTyping(false);
+    setChatError('');
     if (!active) return;
+    setMessages([]);
     loadHistory(active.id);
     loadProfile(active.id);
     socketRef.current?.emit('presence:check', { user_id: active.id }, (payload) => {
@@ -210,7 +229,10 @@ export default function Chat() {
 
     const existing = threads.find((thread) => thread.id === targetUser);
     if (existing) {
-      if (!active || active.id !== existing.id) setActive(existing);
+      if (!active || active.id !== existing.id) {
+        setActive(existing);
+        setMobileShowList(false);
+      }
       return;
     }
 
@@ -228,6 +250,7 @@ export default function Chat() {
       };
       setThreads((prev) => [starterThread, ...prev.filter((thread) => thread.id !== starterThread.id)]);
       setActive(starterThread);
+      setMobileShowList(false);
     })();
   }, [router.query.user, threads, me, active]);
 
@@ -240,8 +263,13 @@ export default function Chat() {
     messageSearchInputRef.current?.focus();
   }, [messageSearchOpen]);
 
+  function isSelf(userId) {
+    return Boolean(userId) && userId === meRef.current?.id;
+  }
+
   async function loadThreads() {
     const data = await api.get('/api/messages/threads').catch(() => []);
+    if (isSelf(supportAdminIdRef.current)) supportAdminIdRef.current = null;
     let normalized = data.map((thread) => (
       supportAdminIdRef.current && thread.id === supportAdminIdRef.current ? asSupportThread(thread) : thread
     ));
@@ -262,7 +290,8 @@ export default function Chat() {
 
   async function ensureSupportThread() {
     const admin = await api.get('/api/messages/support').catch(() => null);
-    if (!admin) return;
+    // The admin is the support account: do not show a "Support" chat with yourself.
+    if (!admin || isSelf(admin.id)) return;
 
     const supportThread = asSupportThread({
       id: admin.id,
@@ -283,8 +312,15 @@ export default function Chat() {
   }
 
   async function loadHistory(otherId) {
-    const data = await api.get(`/api/messages/${otherId}`).catch(() => []);
+    const data = await api.get(`/api/messages/${otherId}`).catch(() => {
+      setChatError(language === 'ru' ? 'Не удалось загрузить сообщения.' : language === 'kz' ? 'Хабарламаларды жүктеу мүмкін болмады.' : 'Could not load messages.');
+      return [];
+    });
+    // Ignore the answer if the user already switched to another chat.
+    if (activeRef.current?.id !== otherId) return;
     setMessages(data);
+    // Opening the chat marks messages as read on the server, so clear the unread dot.
+    setThreads((prev) => prev.map((thread) => (thread.id === otherId ? { ...thread, unread: false } : thread)));
     data
       .filter((message) => message.sender_id === otherId && !message.is_delivered)
       .forEach((message) => socketRef.current?.emit('message:delivered', { message_id: message.id }));
@@ -309,21 +345,40 @@ export default function Chat() {
     }, 900);
   }
 
-  function sendMessage(payload) {
-    return new Promise((resolve, reject) => {
-      if (!active || !socketRef.current) {
-        reject(new Error(language === 'ru' ? 'Сначала выберите диалог.' : language === 'kz' ? 'Алдымен диалогты таңдаңыз.' : 'Choose a conversation first.'));
-        return;
-      }
+  async function sendMessage(payload) {
+    if (!active) {
+      throw new Error(language === 'ru' ? 'Сначала выберите диалог.' : language === 'kz' ? 'Алдымен диалогты таңдаңыз.' : 'Choose a conversation first.');
+    }
+    const receiverId = active.id;
+    const socket = socketRef.current;
+    const hasAttachment = Boolean(payload.audio_url || payload.image_url || payload.file_url);
+    const offlineText = language === 'ru'
+      ? 'Нет соединения с чатом. Проверьте интернет и попробуйте ещё раз.'
+      : language === 'kz'
+        ? 'Чатпен байланыс жоқ. Интернетті тексеріп, қайта көріңіз.'
+        : 'No connection to the chat. Check your internet and try again.';
 
-      socketRef.current.emit(
+    // Without a live socket, plain text can still go through the REST API.
+    if (!socket?.connected) {
+      if (hasAttachment) throw new Error(offlineText);
+      const message = await api.post('/api/messages', { receiver_id: receiverId, body: payload.body });
+      setMessages((prev) => (activeRef.current?.id === receiverId ? upsertMessage(prev, message) : prev));
+      loadThreads();
+      return message;
+    }
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(offlineText)), SEND_TIMEOUT_MS);
+      socket.emit(
         'message:send',
-        { receiver_id: active.id, ...payload },
+        { receiver_id: receiverId, ...payload },
         (response) => {
+          clearTimeout(timer);
           if (!response?.ok) {
             reject(new Error(response?.error || 'Could not send message.'));
             return;
           }
+          setMessages((prev) => (activeRef.current?.id === receiverId ? upsertMessage(prev, response.message) : prev));
           resolve(response.message);
           loadThreads();
         }
@@ -332,19 +387,29 @@ export default function Chat() {
   }
 
   async function deleteForSelf(messageId) {
-    await api.delete(`/api/messages/${messageId}`, { scope: 'self' });
-    setMessages((prev) => prev.filter((item) => item.id !== messageId));
-    loadThreads();
+    try {
+      setChatError('');
+      await api.delete(`/api/messages/${messageId}`, { scope: 'self' });
+      setMessages((prev) => prev.filter((item) => item.id !== messageId));
+      loadThreads();
+    } catch (err) {
+      setChatError(err.message);
+    }
   }
 
   async function deleteForEveryone(messageId) {
-    const response = await api.delete(`/api/messages/${messageId}`, { scope: 'everyone' });
-    if (response?.message) {
-      setMessages((prev) => prev.map((item) => (
-        item.id === messageId ? { ...item, ...response.message } : item
-      )));
+    try {
+      setChatError('');
+      const response = await api.delete(`/api/messages/${messageId}`, { scope: 'everyone' });
+      if (response?.message) {
+        setMessages((prev) => prev.map((item) => (
+          item.id === messageId ? { ...item, ...response.message } : item
+        )));
+      }
+      loadThreads();
+    } catch (err) {
+      setChatError(err.message);
     }
-    loadThreads();
   }
 
   async function deleteChat() {
@@ -361,6 +426,10 @@ export default function Chat() {
       const nextThreads = threads.filter((thread) => thread.id !== active.id);
       setThreads(nextThreads);
       setActive(nextThreads[0] || null);
+      setMobileShowList(true);
+      setDeleteChatOpen(false);
+    } catch (err) {
+      setChatError(err.message);
       setDeleteChatOpen(false);
     } finally {
       setDeletingChat(false);
@@ -371,6 +440,7 @@ export default function Chat() {
     try {
       setSupportLoading(true);
       const admin = await api.get('/api/messages/support');
+      if (isSelf(admin.id)) return;
       const supportThread = asSupportThread({
         id: admin.id,
         full_name: admin.full_name,
@@ -382,11 +452,14 @@ export default function Chat() {
       });
       setSupportAdminId(admin.id);
       setActive(supportThread);
+      setMobileShowList(false);
       setThreads((prev) => {
         const exists = prev.some((item) => item.id === admin.id);
         if (!exists) return [supportThread, ...prev];
         return prev.map((item) => (item.id === admin.id ? { ...item, ...supportThread } : item));
       });
+    } catch (err) {
+      setChatError(err.message);
     } finally {
       setSupportLoading(false);
     }
@@ -408,13 +481,13 @@ export default function Chat() {
       .some((value) => String(value).toLowerCase().includes(q));
   });
 
-  const timeline = buildTimeline(visibleMessages);
+  const timeline = buildTimeline(visibleMessages, language);
   const pinnedSupportThread = threads.find((thread) => thread.is_support || thread.display_role === 'support');
 
   return (
     <DashboardLayout>
       <div className="grid h-[calc(100vh-150px)] grid-cols-1 overflow-hidden rounded-[34px] border border-nanny-orange/10 bg-white shadow-[0_35px_80px_rgba(130,93,47,0.12)] md:grid-cols-[340px_1fr] xl:h-[calc(100vh-132px)]">
-        <aside className="flex min-h-0 flex-col border-r border-nanny-orange/15 bg-[linear-gradient(180deg,#fffdf8_0%,#fff8ee_100%)]">
+        <aside className={`${mobileShowList ? 'flex' : 'hidden'} min-h-0 flex-col border-r md:flex border-nanny-orange/15 bg-[linear-gradient(180deg,#fffdf8_0%,#fff8ee_100%)]`}>
           <div className="border-b border-nanny-orange/15 px-5 py-5">
             <div className="rounded-[28px] border border-nanny-orange/15 bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
@@ -457,7 +530,7 @@ export default function Chat() {
             {pinnedSupportThread && (
               <button
                 type="button"
-                onClick={() => setActive(pinnedSupportThread)}
+                onClick={() => { setActive(pinnedSupportThread); setMobileShowList(false); }}
                 className={`mb-3 w-full rounded-[24px] border p-3 text-left transition ${
                   active?.id === pinnedSupportThread.id
                     ? 'border-nanny-blue bg-white shadow-[0_16px_40px_rgba(74,108,255,0.12)]'
@@ -487,7 +560,7 @@ export default function Chat() {
                 <button
                   key={thread.id}
                   type="button"
-                  onClick={() => setActive(thread)}
+                  onClick={() => { setActive(thread); setMobileShowList(false); }}
                   className={`w-full rounded-[24px] border px-3 py-3 text-left transition ${
                     active?.id === thread.id
                       ? 'border-nanny-blue bg-white shadow-[0_16px_40px_rgba(74,108,255,0.12)]'
@@ -533,7 +606,14 @@ export default function Chat() {
           </div>
         </aside>
 
-        <section className="flex min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.98),rgba(250,243,227,0.82)_65%,rgba(249,236,213,0.92)_100%)]">
+        <section className={`${mobileShowList ? 'hidden' : 'flex'} min-h-0 flex-col md:flex bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.98),rgba(250,243,227,0.82)_65%,rgba(249,236,213,0.92)_100%)]`}>
+          <button
+            type="button"
+            onClick={() => setMobileShowList(true)}
+            className="flex items-center gap-2 border-b border-nanny-orange/15 px-5 py-3 text-left text-sm font-semibold text-nanny-blue md:hidden"
+          >
+            ← {language === 'ru' ? 'Все диалоги' : language === 'kz' ? 'Барлық диалогтар' : 'All chats'}
+          </button>
           {active ? (
             <>
               <ChatHeader
@@ -580,7 +660,9 @@ export default function Chat() {
                   ))}
                   {!timeline.length && (
                     <div className="rounded-2xl border border-dashed border-nanny-orange/20 bg-white/70 p-5 text-sm opacity-60">
-                      {t.noMessagesFound || 'No messages found for this search.'}
+                      {messageSearch.trim()
+                        ? (t.noMessagesFound || 'No messages found for this search.')
+                        : (t.startConversation || 'Start the conversation')}
                     </div>
                   )}
                   {typing && (
@@ -592,6 +674,9 @@ export default function Chat() {
                 </div>
               </div>
 
+              {chatError && (
+                <div className="mx-4 mb-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{chatError}</div>
+              )}
               <ChatInput disabled={!active} onSend={sendMessage} onTyping={notifyTyping} />
             </>
           ) : (

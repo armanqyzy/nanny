@@ -42,6 +42,7 @@ export default function MessageBubble({ message, mine, onDeleteSelf, onDeleteEve
                   href={message.file_url}
                   target="_blank"
                   rel="noreferrer"
+                  {...(String(message.file_url).startsWith('data:') ? { download: 'nanny-file' } : {})}
                   className={`inline-flex rounded-xl px-3 py-2 text-sm font-semibold ${
                     mine ? 'bg-white/15 text-white' : 'bg-nanny-cream text-nanny-blue'
                   }`}
@@ -59,7 +60,7 @@ export default function MessageBubble({ message, mine, onDeleteSelf, onDeleteEve
         </div>
 
         {!deleted && (
-          <div className={`mt-1 flex gap-2 px-2 opacity-0 transition group-hover:opacity-100 ${mine ? 'justify-end' : 'justify-start'}`}>
+          <div className={`mt-1 flex gap-2 px-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 ${mine ? 'justify-end' : 'justify-start'}`}>
             <button type="button" className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-red-600 shadow-sm" onClick={() => onDeleteSelf?.(message.id)}>
               {t.deleteMe || 'Delete for me'}
             </button>

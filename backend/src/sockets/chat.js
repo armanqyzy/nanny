@@ -3,6 +3,7 @@ const { createBookingUpdate, getBookingAudience } = require('../services/petUpda
 const {
   createMessage,
   markMessageDelivered,
+  markConversationRead,
 } = require('../services/messageService');
 const { createNotification } = require('../services/notificationService');
 const db = require('../config/db');
@@ -103,6 +104,25 @@ function registerChat(io) {
           });
         }
         ack?.({ ok: true, delivered: Boolean(delivered) });
+      } catch (err) {
+        ack?.({ ok: false, error: err.message });
+      }
+    });
+
+    // The receiver has the conversation open: mark everything from that user as read.
+    socket.on('message:read', async ({ other_id } = {}, ack) => {
+      try {
+        const otherId = Number(other_id);
+        if (!Number.isInteger(otherId) || otherId <= 0) throw new Error('other_id required');
+        const updated = await markConversationRead(uid, otherId);
+        updated.forEach((message) => {
+          io.to(`user:${message.sender_id}`).emit('message:delivered', {
+            message_id: message.id,
+            sender_id: message.sender_id,
+            receiver_id: message.receiver_id,
+          });
+        });
+        ack?.({ ok: true, count: updated.length });
       } catch (err) {
         ack?.({ ok: false, error: err.message });
       }

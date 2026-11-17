@@ -27,17 +27,49 @@ function normalizeMessage(row) {
   };
 }
 
+const MAX_BODY_LENGTH = 4000;
+const MAX_MEDIA_LENGTH = 7 * 1024 * 1024; // data URL characters (~5 MB file)
+
+function httpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
+function validateMedia(value, label) {
+  if (value == null || value === '') return;
+  if (typeof value !== 'string') throw httpError(400, `${label} is invalid`);
+  const allowed = value.startsWith('data:') || /^https?:\/\//i.test(value) || value.startsWith('/uploads/');
+  if (!allowed) throw httpError(400, `${label} is invalid`);
+  if (value.length > MAX_MEDIA_LENGTH) throw httpError(413, 'Attachment is too large. Maximum size is 5 MB.');
+}
+
 async function createMessage({ senderId, receiverId, body, audio_url, image_url, file_url }) {
-  const hasContent = [body, audio_url, image_url, file_url].some((value) => String(value || '').trim());
-  if (!receiverId || !hasContent) {
-    throw new Error('receiver_id and at least one message content field are required');
+  receiverId = Number(receiverId);
+  const text = typeof body === 'string' ? body.trim() : '';
+  const hasContent = [text, audio_url, image_url, file_url].some((value) => String(value || '').trim());
+  if (!Number.isInteger(receiverId) || receiverId <= 0 || !hasContent) {
+    throw httpError(400, 'receiver_id and at least one message content field are required');
   }
+  if (receiverId === Number(senderId)) {
+    throw httpError(400, 'You cannot send a message to yourself');
+  }
+  if (text.length > MAX_BODY_LENGTH) {
+    throw httpError(400, `Message is too long. Maximum is ${MAX_BODY_LENGTH} characters.`);
+  }
+  validateMedia(audio_url, 'audio_url');
+  validateMedia(image_url, 'image_url');
+  validateMedia(file_url, 'file_url');
+
+  const { rows: receiverRows } = await db.query('SELECT id, is_blocked FROM users WHERE id = $1', [receiverId]);
+  if (!receiverRows[0]) throw httpError(404, 'This user does not exist anymore');
+  if (receiverRows[0].is_blocked) throw httpError(403, 'This user is blocked and cannot receive messages');
 
   const { rows } = await db.query(
     `INSERT INTO messages (sender_id, receiver_id, body, audio_url, image_url, file_url)
      VALUES ($1,$2,$3,$4,$5,$6)
      RETURNING *`,
-    [senderId, receiverId, body || null, audio_url || null, image_url || null, file_url || null]
+    [senderId, receiverId, text || null, audio_url || null, image_url || null, file_url || null]
   );
 
   return normalizeMessage(rows[0]);
@@ -152,7 +184,7 @@ async function deleteMessageForSelf(messageId, userId) {
       WHERE id = $1 AND ($2 IN (sender_id, receiver_id))`,
     [messageId, userId]
   );
-  if (!rows[0]) throw new Error('Message not found');
+  if (!rows[0]) throw httpError(404, 'Message not found');
 
   await db.query(
     `INSERT INTO message_hidden_for_users (message_id, user_id)
@@ -179,7 +211,7 @@ async function deleteMessageForEveryone(messageId, userId) {
     [messageId, userId]
   );
 
-  if (!rows[0]) throw new Error('Message not found or not allowed');
+  if (!rows[0]) throw httpError(404, 'Message not found or not allowed');
   return normalizeMessage(rows[0]);
 }
 

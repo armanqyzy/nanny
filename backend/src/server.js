@@ -56,6 +56,9 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  // Chat photos, files and voice notes are sent as data URLs, so allow up to ~8 MB per event
+  // (the default 1 MB silently dropped bigger attachments).
+  maxHttpBufferSize: 8 * 1024 * 1024,
 });
 
 // Expose io to controllers via req.app.get('io')
