@@ -354,7 +354,7 @@ export default function SittersMapExplorer({
   pickCenterRef.current = (latlng) => {
     const nextCenter = normalizeCenter({ lat: latlng?.lat, lng: latlng?.lng });
     if (!nextCenter) return;
-    saveMapCenter(nextCenter);
+    // A clicked place is only for this search; it is not remembered for the next visit.
     setHasBrowserLocation(false);
     setPickedPlace(true);
     setSelected(null);
@@ -766,6 +766,33 @@ export default function SittersMapExplorer({
     requestBrowserLocation();
   }
 
+  function resetToAlmaty() {
+    try { window.localStorage.removeItem(MAP_CENTER_STORAGE_KEY); } catch (_error) { /* ignore */ }
+    setHasBrowserLocation(false);
+    setPickedPlace(false);
+    setSelected(null);
+    setError('');
+    updateCenter(DEFAULT_CENTER);
+  }
+
+  // Leaflet does not notice when its box changes size (mobile tabs, layout shifts),
+  // which leaves grey empty areas. Re-measure the map whenever the box resizes.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !mapNodeRef.current || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(() => {
+      const map = mapInstanceRef.current;
+      if (map && isMapRenderable(map)) map.invalidateSize();
+    });
+    observer.observe(mapNodeRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (mobileView !== 'map') return undefined;
+    const timer = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 150);
+    return () => clearTimeout(timer);
+  }, [mobileView]);
+
   return (
     <section className="rounded-[30px] border border-nanny-orange/15 bg-white p-5 shadow-soft lg:p-6">
       {(title || subtitle || controlsSlot) && (
@@ -805,6 +832,9 @@ export default function SittersMapExplorer({
               </label>
               <button type="button" className="btn-ghost self-end" onClick={useMyLocation} disabled={isLocating}>
                 {isLocating ? (t.locating || 'Detecting location...') : (t.detectLocation || 'Use my location')}
+              </button>
+              <button type="button" className="btn-ghost self-end" onClick={resetToAlmaty}>
+                {language === 'ru' ? 'Центр Алматы' : language === 'kz' ? 'Алматы орталығы' : 'Almaty center'}
               </button>
               {listHref && (
                 <Link href={listHref} className="btn-secondary self-end">
