@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/DashboardLayout';
+import EmptyState from '../../components/EmptyState';
+import PaymentCardForm from '../../components/PaymentCardForm';
 import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { STORE_INFO, buildCheckoutAddress, handleProductImageError } from '../../lib/shop';
+import { useLanguage } from '../../lib/i18n';
+import { EMPTY_CARD, friendlyPaymentError, toPaymentPayload, validateCard } from '../../lib/payment';
 
 const EMPTY_CHECKOUT = {
   full_name: '',
@@ -13,403 +17,236 @@ const EMPTY_CHECKOUT = {
   notes: '',
 };
 
-const EMPTY_PAYMENT = {
-  card_holder: '',
-  card_number: '',
-  expiry_month: '',
-  expiry_year: '',
-  cvv: '',
+const TEXT = {
+  en: {
+    title: 'Cart & checkout', emptyTitle: 'Your cart is empty', emptyText: 'Add food, accessories or care items from the shop to place an order.',
+    toShop: 'Go to the shop', myOrders: 'My orders', items: 'Items', each: 'each', total: 'Total', remove: 'Remove',
+    step1: '1. Your items', step2: '2. Contact and delivery', step3: '3. Payment',
+    name: 'Recipient name', phone: 'Phone', phoneHint: 'For the courier, e.g. +7 777 123 45 67', email: 'Email', emailHint: 'The receipt will be sent here',
+    courier: 'Courier delivery in Almaty', pickup: 'Pick up from the store', address: 'Delivery address', addressHint: 'Street, house, apartment',
+    pickupInfo: (a, h) => `Pick-up point: ${a}. ${h}.`, notes: 'Comment for the courier (optional)',
+    pay: (sum) => `Pay ${sum} ₸`, paying: 'Paying...', fixFields: 'Check the fields marked in red.',
+    needName: 'Enter the recipient name.', needPhone: 'Enter a phone number, at least 6 digits.', needEmail: 'Enter a valid email.', needAddress: 'Enter the delivery address (at least 5 characters).',
+    after: 'After payment the order appears in "My orders" with its status.',
+  },
+  ru: {
+    title: 'Корзина и оплата', emptyTitle: 'Корзина пуста', emptyText: 'Добавьте корм, аксессуары или товары для ухода из магазина, чтобы оформить заказ.',
+    toShop: 'Перейти в магазин', myOrders: 'Мои заказы', items: 'Товаров', each: 'за шт.', total: 'Итого', remove: 'Убрать',
+    step1: '1. Ваши товары', step2: '2. Контакты и доставка', step3: '3. Оплата',
+    name: 'Имя получателя', phone: 'Телефон', phoneHint: 'Для курьера, например +7 777 123 45 67', email: 'Email', emailHint: 'Сюда придёт чек',
+    courier: 'Курьером по Алматы', pickup: 'Самовывоз из магазина', address: 'Адрес доставки', addressHint: 'Улица, дом, квартира',
+    pickupInfo: (a, h) => `Пункт самовывоза: ${a}. ${h}.`, notes: 'Комментарий для курьера (необязательно)',
+    pay: (sum) => `Оплатить ${sum} ₸`, paying: 'Оплачиваем...', fixFields: 'Проверьте поля, отмеченные красным.',
+    needName: 'Введите имя получателя.', needPhone: 'Введите номер телефона, минимум 6 цифр.', needEmail: 'Введите корректный email.', needAddress: 'Введите адрес доставки (минимум 5 символов).',
+    after: 'После оплаты заказ появится в «Моих заказах» со статусом.',
+  },
+  kz: {
+    title: 'Себет және төлем', emptyTitle: 'Себет бос', emptyText: 'Тапсырыс беру үшін дүкеннен жем, аксессуар немесе күтім тауарларын қосыңыз.',
+    toShop: 'Дүкенге өту', myOrders: 'Менің тапсырыстарым', items: 'Тауарлар', each: 'дана', total: 'Барлығы', remove: 'Алу',
+    step1: '1. Тауарларыңыз', step2: '2. Байланыс және жеткізу', step3: '3. Төлем',
+    name: 'Алушының аты', phone: 'Телефон', phoneHint: 'Курьер үшін, мысалы +7 777 123 45 67', email: 'Email', emailHint: 'Чек осында келеді',
+    courier: 'Алматы бойынша курьер', pickup: 'Дүкеннен алып кету', address: 'Жеткізу мекенжайы', addressHint: 'Көше, үй, пәтер',
+    pickupInfo: (a, h) => `Алып кету орны: ${a}. ${h}.`, notes: 'Курьерге түсініктеме (міндетті емес)',
+    pay: (sum) => `${sum} ₸ төлеу`, paying: 'Төленуде...', fixFields: 'Қызылмен белгіленген өрістерді тексеріңіз.',
+    needName: 'Алушының атын енгізіңіз.', needPhone: 'Телефон нөмірін енгізіңіз, кемінде 6 цифр.', needEmail: 'Дұрыс email енгізіңіз.', needAddress: 'Жеткізу мекенжайын енгізіңіз (кемінде 5 таңба).',
+    after: 'Төлемнен кейін тапсырыс «Менің тапсырыстарымда» мәртебесімен көрінеді.',
+  },
 };
 
-function onlyDigits(value) {
-  return String(value || '').replace(/\D/g, '');
+function contactErrors(form, t) {
+  const errors = {};
+  if (form.full_name.trim().length < 2) errors.full_name = t.needName;
+  if (form.phone.replace(/\D/g, '').length < 6) errors.phone = t.needPhone;
+  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) errors.email = t.needEmail;
+  if (form.delivery_method === 'courier' && form.address.trim().length < 5) errors.address = t.needAddress;
+  return errors;
 }
 
-function formatCardNumber(value) {
-  return onlyDigits(value)
-    .slice(0, 19)
-    .replace(/(.{4})/g, '$1 ')
-    .trim();
-}
-
-function luhnCheck(cardNumber) {
-  const digits = onlyDigits(cardNumber);
-  let sum = 0;
-  let shouldDouble = false;
-
-  for (let i = digits.length - 1; i >= 0; i -= 1) {
-    let digit = Number(digits[i]);
-    if (shouldDouble) {
-      digit *= 2;
-      if (digit > 9) digit -= 9;
-    }
-    sum += digit;
-    shouldDouble = !shouldDouble;
+function friendlyCheckoutError(message, language) {
+  const text = String(message || '');
+  if (/Not enough stock/i.test(text)) {
+    return language === 'ru' ? 'Одного из товаров не хватает на складе. Уменьшите количество.' : language === 'kz' ? 'Тауарлардың бірі қоймада жеткіліксіз. Санын азайтыңыз.' : 'One of the items is out of stock. Reduce the quantity.';
   }
-
-  return digits.length >= 13 && digits.length <= 19 && sum % 10 === 0;
-}
-
-function isFutureExpiry(month, year) {
-  const normalizedMonth = Number(month);
-  const normalizedYear = Number(year);
-  if (!normalizedMonth || !normalizedYear || normalizedMonth < 1 || normalizedMonth > 12) return false;
-
-  const fullYear = normalizedYear < 100 ? 2000 + normalizedYear : normalizedYear;
-  const now = new Date();
-  const expiry = new Date(fullYear, normalizedMonth, 0, 23, 59, 59, 999);
-  return expiry >= now;
-}
-
-function normalizeCheckoutError(message) {
-  const text = String(message || '').trim();
-
-  if (!text) return 'Could not complete payment yet. Please review the checkout details and try again.';
-  if (text.includes('payment.cardholder_name')) return 'Card holder name is missing.';
-  if (text.includes('payment.cvc')) return 'Security code is missing.';
-  if (text.includes('invalid card number')) return 'Card number is invalid. Try a test Visa like 4242 4242 4242 4242.';
-  if (text.includes('card expiry date is invalid')) return 'Card expiry date is invalid.';
-  if (text.includes('invalid security code')) return 'Security code is invalid.';
-  if (text.includes('Not enough stock')) return 'One of the items is out of stock. Update the cart and try again.';
-  if (text.includes('Product') && text.includes('not found')) return 'One of the products is no longer available.';
-
-  return text;
+  if (/not found/i.test(text)) {
+    return language === 'ru' ? 'Один из товаров больше недоступен.' : language === 'kz' ? 'Тауарлардың бірі енді қолжетімсіз.' : 'One of the products is no longer available.';
+  }
+  return friendlyPaymentError(text, language);
 }
 
 export default function Cart() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = TEXT[language] || TEXT.en;
   const [cart, setCart] = useState({});
   const [checkoutForm, setCheckoutForm] = useState(EMPTY_CHECKOUT);
-  const [paymentForm, setPaymentForm] = useState(EMPTY_PAYMENT);
+  const [card, setCard] = useState(EMPTY_CARD);
+  const [attempted, setAttempted] = useState(false);
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (!currentUser()) { router.replace('/login'); return; }
-    const raw = localStorage.getItem('nanny_cart');
-    if (raw) setCart(JSON.parse(raw));
-    (async () => {
-      try {
-        const me = await api.get('/api/auth/me');
-        setCheckoutForm((prev) => ({
-          ...prev,
-          full_name: me.full_name || '',
-          phone: me.phone || '',
-          email: me.email || '',
-          address: me.address || '',
-        }));
-      } catch {}
-    })();
+    try {
+      const raw = localStorage.getItem('nanny_cart');
+      if (raw) setCart(JSON.parse(raw));
+    } catch { setCart({}); }
+    api.get('/api/auth/me').then((me) => {
+      setCheckoutForm((prev) => ({
+        ...prev,
+        full_name: me.full_name || '',
+        phone: me.phone || '',
+        email: me.email || '',
+        address: me.address || '',
+      }));
+    }).catch(() => {});
   }, [router]);
 
   const items = Object.values(cart);
-  const total = items.reduce((s, it) => s + Number(it.product.price) * it.qty, 0);
+  const total = items.reduce((sum, it) => sum + Number(it.product.price) * it.qty, 0);
+  const itemCount = items.reduce((sum, it) => sum + it.qty, 0);
+  const errors = contactErrors(checkoutForm, t);
+  const show = (field) => attempted && errors[field];
 
   function setQty(id, qty) {
     const next = { ...cart };
-    if (qty <= 0) delete next[id];
-    else next[id] = { ...cart[id], qty };
+    const safe = Math.max(0, Math.min(99, Math.floor(Number(qty) || 0)));
+    if (safe <= 0) delete next[id];
+    else next[id] = { ...cart[id], qty: safe };
     setCart(next);
     localStorage.setItem('nanny_cart', JSON.stringify(next));
   }
 
-  const missingFields = [
-    !checkoutForm.full_name.trim() && 'recipient name',
-    !checkoutForm.email.trim() && 'email',
-    !checkoutForm.phone.trim() && 'phone number',
-    checkoutForm.delivery_method === 'courier' && !checkoutForm.address.trim() && 'delivery address',
-    !paymentForm.card_holder.trim() && 'card holder',
-    !luhnCheck(paymentForm.card_number) && 'valid card number',
-    !isFutureExpiry(paymentForm.expiry_month, paymentForm.expiry_year) && 'valid expiry date',
-    paymentForm.cvv.trim().length < 3 && 'security code',
-  ].filter(Boolean);
-
-  const canCheckout = items.length > 0 && missingFields.length === 0 && !loading;
-
   async function checkout() {
-    const nextErrors = {};
-    if (!checkoutForm.full_name.trim()) nextErrors.full_name = 'Enter the recipient full name.';
-    if (!checkoutForm.email.trim()) nextErrors.email = 'Enter the email for the receipt.';
-    if (!checkoutForm.phone.trim()) nextErrors.phone = 'Enter the phone number.';
-    if (checkoutForm.delivery_method === 'courier' && !checkoutForm.address.trim()) nextErrors.address = 'Enter the delivery address.';
-    if (!paymentForm.card_holder.trim()) nextErrors.card_holder = 'Enter the card holder name.';
-    if (!luhnCheck(paymentForm.card_number)) nextErrors.card_number = 'Enter a valid card number.';
-    if (!isFutureExpiry(paymentForm.expiry_month, paymentForm.expiry_year)) {
-      nextErrors.expiry_month = 'Enter a valid future expiry date.';
-      nextErrors.expiry_year = 'Enter a valid future expiry date.';
-    }
-    if (paymentForm.cvv.trim().length < 3) nextErrors.cvv = 'Enter the security code.';
-
-    if (Object.keys(nextErrors).length) {
-      setFieldErrors(nextErrors);
-      setMsg({ type: 'err', text: 'Please complete the highlighted checkout fields.' });
+    if (loading) return;
+    setAttempted(true);
+    const cardErrors = validateCard(card, language);
+    if (Object.keys(errors).length || Object.keys(cardErrors).length) {
+      setMsg({ type: 'err', text: t.fixFields });
       return;
     }
-
     setMsg(null);
     setLoading(true);
-    setFieldErrors({});
     try {
       const order = await api.post('/api/orders/checkout', {
         items: items.map((it) => ({ product_id: it.product.id, quantity: it.qty })),
         address: buildCheckoutAddress(checkoutForm),
-        customer_email: checkoutForm.email,
-        customer_name: checkoutForm.full_name,
-        customer_phone: checkoutForm.phone,
-        payment: {
-          cardholder_name: paymentForm.card_holder.trim(),
-          card_number: onlyDigits(paymentForm.card_number),
-          expiry_month: Number(paymentForm.expiry_month),
-          expiry_year: Number(paymentForm.expiry_year),
-          cvc: paymentForm.cvv.trim(),
-        },
+        customer_email: checkoutForm.email.trim(),
+        customer_name: checkoutForm.full_name.trim(),
+        customer_phone: checkoutForm.phone.trim(),
+        payment: toPaymentPayload(card),
       });
       localStorage.removeItem('nanny_cart');
       setCart({});
       router.push(`/shop/orders?placed=${order.id}`);
     } catch (error) {
-      setMsg({ type: 'err', text: normalizeCheckoutError(error.message) });
+      setMsg({ type: 'err', text: friendlyCheckoutError(error.message, language) });
+    } finally {
+      setLoading(false);
     }
-    finally { setLoading(false); }
   }
 
+  const fieldClass = (field) => `input ${show(field) ? 'border-red-300 ring-2 ring-red-100' : ''}`;
+  const Hint = ({ field, hint }) => (show(field)
+    ? <span className="mt-1 block text-xs text-red-600">{errors[field]}</span>
+    : hint ? <span className="mt-1 block text-xs text-nanny-brownish/55">{hint}</span> : null);
+
   return (
-    <DashboardLayout title="Cart & Checkout">
+    <DashboardLayout title={t.title}>
       {items.length === 0 ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-          <div className="card bg-white/90">
-            <div className="max-w-lg">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-nanny-deepOrange/60">Cart</p>
-              <h2 className="mt-2 text-3xl font-bold text-nanny-blue">Your cart is empty</h2>
-              <p className="mt-4 text-base leading-7 text-nanny-brownish/80">
-                Add food, accessories or care items to continue checkout. Once you place an order, we will keep you updated in notifications and by email.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button onClick={() => router.push('/shop')} className="btn-secondary">
-                  Back to shop
-                </button>
-                <button onClick={() => router.push('/shop/orders')} className="btn-ghost">
-                  View my orders
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="card h-max bg-nanny-cream/60">
-            <p className="font-semibold text-nanny-deepOrange">Need help before ordering?</p>
-            <div className="mt-3 space-y-2 text-sm text-nanny-brownish/80">
-              <p><span className="font-semibold">Shop:</span> {STORE_INFO.name}</p>
-              <p><span className="font-semibold">Address:</span> {STORE_INFO.address}</p>
-              <p><span className="font-semibold">Phone:</span> <a className="text-nanny-blue hover:underline" href={`tel:${STORE_INFO.phone}`}>{STORE_INFO.phone}</a></p>
-              <p><span className="font-semibold">Hours:</span> {STORE_INFO.hours}</p>
-            </div>
-          </div>
-        </div>
+        <EmptyState title={t.emptyTitle} text={t.emptyText} actionLabel={t.toShop} actionHref="/shop" />
       ) : (
-        <div className="grid md:grid-cols-[1fr_320px] gap-6">
-          <div className="card">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-nanny-orange/10 pb-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] opacity-45">Checkout flow</p>
-                <h2 className="mt-1 text-xl font-bold text-nanny-deepOrange">Review items, pay, then track in My orders</h2>
+        <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+          <div className="space-y-6">
+            <section className="card">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-nanny-deepOrange">{t.step1}</h2>
+                <button type="button" onClick={() => router.push('/shop/orders')} className="btn-ghost text-sm">{t.myOrders}</button>
               </div>
-              <button onClick={() => router.push('/shop/orders')} className="btn-ghost text-sm">
-                View my orders
-              </button>
-            </div>
-            <ul className="divide-y divide-nanny-orange/20">
-              {items.map((it) => (
-                <li key={it.product.id} className="flex gap-4 py-3 items-center">
-                  <img
-                    src={absoluteAssetUrl(it.product.image_url)}
-                    alt={it.product.title}
-                    className="w-16 h-16 rounded-lg object-cover"
-                    onError={handleProductImageError}
-                  />
-                  <div className="flex-1">
-                    <div className="font-semibold">{it.product.title}</div>
-                    <div className="text-xs opacity-70">{Number(it.product.price).toLocaleString()} ₸ each</div>
-                  </div>
-                  <input type="number" min={0} className="input w-20"
-                         value={it.qty} onChange={(e) => setQty(it.product.id, Number(e.target.value))} />
-                  <span className="w-24 text-right font-semibold">
-                    {(Number(it.product.price) * it.qty).toLocaleString()} ₸
-                  </span>
-                </li>
-              ))}
-            </ul>
+              <ul className="divide-y divide-nanny-orange/15">
+                {items.map((it) => (
+                  <li key={it.product.id} className="flex flex-wrap items-center gap-4 py-3">
+                    <img src={absoluteAssetUrl(it.product.image_url)} alt={it.product.title}
+                         className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-nanny-cream object-cover text-[0px]" onError={handleProductImageError} />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold">{it.product.title}</div>
+                      <div className="text-xs opacity-70">{Number(it.product.price).toLocaleString()} ₸ {t.each}</div>
+                    </div>
+                    <div className="flex items-center rounded-full border border-nanny-orange/20">
+                      <button type="button" className="px-3 py-1 text-lg" onClick={() => setQty(it.product.id, it.qty - 1)} aria-label="-">−</button>
+                      <span className="w-8 text-center font-semibold">{it.qty}</span>
+                      <button type="button" className="px-3 py-1 text-lg" onClick={() => setQty(it.product.id, it.qty + 1)} aria-label="+">+</button>
+                    </div>
+                    <span className="w-24 text-right font-semibold">{(Number(it.product.price) * it.qty).toLocaleString()} ₸</span>
+                    <button type="button" className="text-xs font-semibold text-red-600" onClick={() => setQty(it.product.id, 0)}>{t.remove}</button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="card space-y-4">
+              <h2 className="text-lg font-bold text-nanny-deepOrange">{t.step2}</h2>
+              <label className="block">
+                <span className="text-sm font-semibold">{t.name}</span>
+                <input className={`${fieldClass('full_name')} mt-1`} value={checkoutForm.full_name}
+                       onChange={(e) => setCheckoutForm({ ...checkoutForm, full_name: e.target.value })} />
+                <Hint field="full_name" />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-semibold">{t.phone}</span>
+                  <input className={`${fieldClass('phone')} mt-1`} type="tel" inputMode="tel" placeholder="+7 777 123 45 67" value={checkoutForm.phone}
+                         onChange={(e) => setCheckoutForm({ ...checkoutForm, phone: e.target.value.replace(/[^\d+()\-\s]/g, '') })} />
+                  <Hint field="phone" hint={t.phoneHint} />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold">{t.email}</span>
+                  <input className={`${fieldClass('email')} mt-1`} type="email" value={checkoutForm.email}
+                         onChange={(e) => setCheckoutForm({ ...checkoutForm, email: e.target.value })} />
+                  <Hint field="email" hint={t.emailHint} />
+                </label>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {['courier', 'pickup'].map((method) => (
+                  <button key={method} type="button"
+                          onClick={() => setCheckoutForm({ ...checkoutForm, delivery_method: method })}
+                          className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold ${checkoutForm.delivery_method === method ? 'border-nanny-orange bg-[#fff1e2] text-nanny-deepOrange' : 'border-nanny-orange/20 bg-white'}`}>
+                    {method === 'courier' ? t.courier : t.pickup}
+                  </button>
+                ))}
+              </div>
+              {checkoutForm.delivery_method === 'courier' ? (
+                <label className="block">
+                  <span className="text-sm font-semibold">{t.address}</span>
+                  <input className={`${fieldClass('address')} mt-1`} value={checkoutForm.address}
+                         onChange={(e) => setCheckoutForm({ ...checkoutForm, address: e.target.value })} />
+                  <Hint field="address" hint={t.addressHint} />
+                </label>
+              ) : (
+                <p className="rounded-2xl bg-nanny-cream/70 p-3 text-sm">{t.pickupInfo(STORE_INFO.address, STORE_INFO.hours)}</p>
+              )}
+              <label className="block">
+                <span className="text-sm font-semibold">{t.notes}</span>
+                <textarea className="input mt-1" rows={2} value={checkoutForm.notes}
+                          onChange={(e) => setCheckoutForm({ ...checkoutForm, notes: e.target.value })} />
+              </label>
+            </section>
           </div>
 
-          <div className="card h-max">
-            <h3 className="font-bold text-nanny-deepOrange mb-3">Summary</h3>
-            <p className="flex justify-between text-sm mb-2">
-              <span>Items</span>
-              <span>{items.reduce((a, b) => a + b.qty, 0)}</span>
-            </p>
-            <p className="flex justify-between font-bold text-lg border-t border-nanny-orange/20 pt-2 mt-2">
-              <span>Total</span>
-              <span>{total.toLocaleString()} ₸</span>
-            </p>
-
-            <div className="mt-4 space-y-3">
-              <input
-                className={`input ${fieldErrors.full_name ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                placeholder="Recipient full name"
-                value={checkoutForm.full_name}
-                onChange={(e) => {
-                  setCheckoutForm({ ...checkoutForm, full_name: e.target.value });
-                  setFieldErrors((prev) => ({ ...prev, full_name: '' }));
-                }}
-              />
-              <input
-                className={`input ${fieldErrors.phone ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                placeholder="Phone number"
-                value={checkoutForm.phone}
-                onChange={(e) => {
-                  setCheckoutForm({ ...checkoutForm, phone: e.target.value });
-                  setFieldErrors((prev) => ({ ...prev, phone: '' }));
-                }}
-              />
-              <input
-                className={`input ${fieldErrors.email ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                type="email"
-                placeholder="Email for payment receipt"
-                value={checkoutForm.email}
-                onChange={(e) => {
-                  setCheckoutForm({ ...checkoutForm, email: e.target.value });
-                  setFieldErrors((prev) => ({ ...prev, email: '' }));
-                }}
-              />
-              <select
-                className="input"
-                value={checkoutForm.delivery_method}
-                onChange={(e) => {
-                  setCheckoutForm({ ...checkoutForm, delivery_method: e.target.value });
-                  setFieldErrors((prev) => ({ ...prev, address: '' }));
-                }}
-              >
-                <option value="courier">Courier delivery</option>
-                <option value="pickup">Store pickup</option>
-              </select>
-              <textarea
-                className={`input ${fieldErrors.address ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                rows={3}
-                placeholder={checkoutForm.delivery_method === 'pickup' ? 'Pickup note or branch preference (optional)' : 'Delivery address'}
-                value={checkoutForm.address}
-                onChange={(e) => {
-                  setCheckoutForm({ ...checkoutForm, address: e.target.value });
-                  setFieldErrors((prev) => ({ ...prev, address: '' }));
-                }}
-              />
-              <textarea
-                className="input"
-                rows={2}
-                placeholder="Notes for delivery or contact"
-                value={checkoutForm.notes}
-                onChange={(e) => setCheckoutForm({ ...checkoutForm, notes: e.target.value })}
-              />
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-nanny-blue/15 bg-nanny-blue/5 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-nanny-blue">Card payment</p>
-                  <p className="mt-1 text-sm text-nanny-brownish/75">
-                    Demo payment: no money is charged. Please use the test card 4242 4242 4242 4242, any future date and any 3-digit code. Do not enter a real card.
-                  </p>
-                </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-nanny-blue">
-                  Demo
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                <input
-                  className={`input ${fieldErrors.card_holder ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                  placeholder="Card holder name"
-                  value={paymentForm.card_holder}
-                  onChange={(e) => {
-                    setPaymentForm({ ...paymentForm, card_holder: e.target.value });
-                    setFieldErrors((prev) => ({ ...prev, card_holder: '' }));
-                  }}
-                />
-                <input
-                  className={`input ${fieldErrors.card_number ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                  inputMode="numeric"
-                  placeholder="Card number"
-                  value={paymentForm.card_number}
-                  onChange={(e) => {
-                    setPaymentForm({ ...paymentForm, card_number: formatCardNumber(e.target.value) });
-                    setFieldErrors((prev) => ({ ...prev, card_number: '' }));
-                  }}
-                />
-                <div className="grid grid-cols-3 gap-3">
-                  <input
-                    className={`input ${fieldErrors.expiry_month ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                    inputMode="numeric"
-                    placeholder="MM"
-                    value={paymentForm.expiry_month}
-                    onChange={(e) => {
-                      setPaymentForm({ ...paymentForm, expiry_month: e.target.value.replace(/\D/g, '').slice(0, 2) });
-                      setFieldErrors((prev) => ({ ...prev, expiry_month: '' }));
-                    }}
-                  />
-                  <input
-                    className={`input ${fieldErrors.expiry_year ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                    inputMode="numeric"
-                    placeholder="YYYY"
-                    value={paymentForm.expiry_year}
-                    onChange={(e) => {
-                      setPaymentForm({ ...paymentForm, expiry_year: e.target.value.replace(/\D/g, '').slice(0, 4) });
-                      setFieldErrors((prev) => ({ ...prev, expiry_year: '' }));
-                    }}
-                  />
-                  <input
-                    className={`input ${fieldErrors.cvv ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                    inputMode="numeric"
-                    placeholder="CVV"
-                    value={paymentForm.cvv}
-                    onChange={(e) => {
-                      setPaymentForm({ ...paymentForm, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) });
-                      setFieldErrors((prev) => ({ ...prev, cvv: '' }));
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl bg-nanny-orange/10 p-4 text-sm">
-              <p className="font-semibold text-nanny-deepOrange">Where is the shop and how to contact us?</p>
-              <p className="mt-2"><span className="font-semibold">Address:</span> {STORE_INFO.address}</p>
-              <p><span className="font-semibold">Phone:</span> <a className="text-nanny-blue hover:underline" href={`tel:${STORE_INFO.phone}`}>{STORE_INFO.phone}</a></p>
-              <p><span className="font-semibold">Hours:</span> {STORE_INFO.hours}</p>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-nanny-blue/15 bg-nanny-blue/5 p-4 text-sm">
-              <p className="font-semibold text-nanny-blue">Where will I see my order?</p>
-              <p className="mt-2 text-nanny-brownish/75">
-                Right after payment, the order will appear on the My orders page with status tracking and delivery details.
+          <section className="card h-max space-y-4 lg:sticky lg:top-28">
+            <h2 className="text-lg font-bold text-nanny-deepOrange">{t.step3}</h2>
+            <div className="rounded-2xl bg-nanny-cream/60 p-4 text-sm">
+              <p className="flex justify-between"><span>{t.items}</span><span>{itemCount}</span></p>
+              <p className="mt-2 flex justify-between border-t border-nanny-orange/20 pt-2 text-lg font-bold">
+                <span>{t.total}</span><span>{total.toLocaleString()} ₸</span>
               </p>
-              <button onClick={() => router.push('/shop/orders')} className="btn-ghost mt-3 text-sm">
-                Open my orders
-              </button>
             </div>
-
-            {missingFields.length > 0 && !msg && (
-              <p className="text-sm mt-3 text-red-600">
-                Fill in: {missingFields.join(', ')}.
-              </p>
-            )}
-            {msg && <p className={`text-sm mt-2 ${msg.type === 'ok' ? 'text-green-700' : 'text-red-600'}`}>{msg.text}</p>}
-            <button
-              onClick={checkout}
-              className="btn-primary w-full mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!canCheckout}
-            >
-              {loading ? 'Processing payment...' : 'Pay & place order'}
+            <PaymentCardForm value={card} onChange={setCard} language={language} showAllErrors={attempted} />
+            {msg && <p className={`text-sm ${msg.type === 'ok' ? 'text-green-700' : 'text-red-600'}`}>{msg.text}</p>}
+            <button type="button" onClick={checkout} className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60" disabled={loading}>
+              {loading ? t.paying : t.pay(total.toLocaleString())}
             </button>
-          </div>
+            <p className="text-center text-xs opacity-60">{t.after}</p>
+          </section>
         </div>
       )}
     </DashboardLayout>

@@ -133,7 +133,8 @@ const orderSchemas = {
       card_holder: z.string().trim().min(2).max(120).optional(),
       card_number: z.string().trim().regex(/^\d{12,19}$/, 'Card number must be 12-19 digits'),
       expiry_month: z.coerce.number().int().min(1).max(12),
-      expiry_year: z.coerce.number().int().min(new Date().getFullYear()).max(new Date().getFullYear() + 20),
+      // Accept both "30" and "2030"; expiry itself is checked in paymentService.
+      expiry_year: z.coerce.number().int().min(0).max(2100).transform((year) => (year < 100 ? 2000 + year : year)),
       cvc: z.string().trim().regex(/^\d{3,4}$/).optional(),
       cvv: z.string().trim().regex(/^\d{3,4}$/).optional(),
     }).superRefine((payment, ctx) => {

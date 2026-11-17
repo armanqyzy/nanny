@@ -6,10 +6,12 @@ import PetUpdatesFeed from '../../components/PetUpdatesFeed';
 import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
+import PaymentCardForm from '../../components/PaymentCardForm';
+import { EMPTY_CARD, friendlyPaymentError, toPaymentPayload, validateCard } from '../../lib/payment';
 import ReportModal from '../../components/ReportModal';
 import EmptyState from '../../components/EmptyState';
 
-const EMPTY_PAYMENT = { card_holder: '', card_number: '', expiry: '', cvc: '' };
+const EMPTY_PAYMENT = EMPTY_CARD;
 
 // Short inline translations for the booking payment UI.
 function payText(language, key) {
@@ -75,6 +77,7 @@ export default function Bookings() {
   const [payForm, setPayForm] = useState(EMPTY_PAYMENT);
   const [payError, setPayError] = useState('');
   const [paying, setPaying] = useState(false);
+  const [payAttempted, setPayAttempted] = useState(false);
   const [reportBooking, setReportBooking] = useState(null);
   const t = {
     en: {
@@ -228,24 +231,21 @@ export default function Bookings() {
 
   async function submitPayment() {
     if (!payBooking || paying) return;
-    const [mm, yy] = payForm.expiry.split('/').map((part) => part.trim());
+    setPayAttempted(true);
+    if (Object.keys(validateCard(payForm, language)).length) {
+      setPayError(language === 'ru' ? 'Проверьте поля, отмеченные красным.' : language === 'kz' ? 'Қызылмен белгіленген өрістерді тексеріңіз.' : 'Check the fields marked in red.');
+      return;
+    }
     setPaying(true);
     setPayError('');
     try {
-      await api.post(`/api/bookings/${payBooking.id}/pay`, {
-        payment: {
-          cardholder_name: payForm.card_holder.trim(),
-          card_number: payForm.card_number.replace(/\D/g, ''),
-          expiry_month: Number(mm),
-          expiry_year: Number(yy),
-          cvc: payForm.cvc.trim(),
-        },
-      });
+      await api.post(`/api/bookings/${payBooking.id}/pay`, { payment: toPaymentPayload(payForm) });
       setPayBooking(null);
       setPayForm(EMPTY_PAYMENT);
+      setPayAttempted(false);
       reload();
     } catch (err) {
-      setPayError(err.message);
+      setPayError(friendlyPaymentError(err.message, language));
     } finally {
       setPaying(false);
     }
@@ -348,7 +348,7 @@ export default function Bookings() {
                 <button
                   type="button"
                   className="btn-primary text-sm"
-                  onClick={() => { setPayBooking(b); setPayForm(EMPTY_PAYMENT); setPayError(''); }}
+                  onClick={() => { setPayBooking(b); setPayForm(EMPTY_PAYMENT); setPayError(''); setPayAttempted(false); }}
                 >
                   {payText(language, 'pay')} {Number(b.total_price).toLocaleString()} ₸
                 </button>
@@ -582,23 +582,13 @@ export default function Bookings() {
 
       {payBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !paying && setPayBooking(null)}>
-          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-[28px] bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-nanny-deepOrange">{payText(language, 'title')}</h3>
             <p className="mt-1 text-sm opacity-70">
               {payBooking.sitter_name} • {payBooking.pet_name} • {Number(payBooking.total_price).toLocaleString()} ₸
             </p>
-            <p className="mt-3 rounded-2xl bg-nanny-blue/5 p-3 text-xs leading-5 text-nanny-blue">{payText(language, 'demo')}</p>
-            <div className="mt-4 grid gap-3">
-              <input className="input" placeholder={payText(language, 'holder')} value={payForm.card_holder}
-                     onChange={(e) => setPayForm({ ...payForm, card_holder: e.target.value })} />
-              <input className="input" inputMode="numeric" placeholder={payText(language, 'number')} value={payForm.card_number}
-                     onChange={(e) => setPayForm({ ...payForm, card_number: e.target.value.replace(/[^\d ]/g, '').slice(0, 23) })} />
-              <div className="grid grid-cols-2 gap-3">
-                <input className="input" placeholder={payText(language, 'expiry')} value={payForm.expiry}
-                       onChange={(e) => setPayForm({ ...payForm, expiry: e.target.value.replace(/[^\d/]/g, '').slice(0, 5) })} />
-                <input className="input" inputMode="numeric" placeholder="CVC" value={payForm.cvc}
-                       onChange={(e) => setPayForm({ ...payForm, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
-              </div>
+            <div className="mt-4">
+              <PaymentCardForm value={payForm} onChange={setPayForm} language={language} showAllErrors={payAttempted} />
             </div>
             {payError && <p className="mt-3 text-sm text-red-600">{payError}</p>}
             <div className="mt-5 flex gap-2">

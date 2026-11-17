@@ -35,7 +35,8 @@ async function checkout(req, res) {
     const priced = [];
     for (const it of items) {
       const { rows } = await client.query(
-        'SELECT id, title, price, stock FROM products WHERE id=$1 AND is_active=TRUE',
+        // FOR UPDATE locks the product row, so two buyers cannot take the last item at the same time.
+        'SELECT id, title, price, stock FROM products WHERE id=$1 AND is_active=TRUE FOR UPDATE',
         [it.product_id]
       );
       const p = rows[0];
