@@ -8,6 +8,7 @@ const AUTO_MIGRATIONS = [
   '2026-11-17-batch1-features.sql',
   '2026-11-17-batch2-features.sql',
   '2026-11-17-batch3-cancellation.sql',
+  '2026-11-17-batch4-telegram.sql',
 ];
 
 async function ensureSchema() {

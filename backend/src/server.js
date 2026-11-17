@@ -70,7 +70,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'blob:', ...allowedOrigins],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com', ...allowedOrigins],
       connectSrc: ["'self'", ...allowedOrigins],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
@@ -107,6 +107,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/public', require('./routes/public'));
+app.use('/api/telegram', require('./routes/telegram'));
 
 app.use(notFound);
 app.use(errorHandler);
@@ -130,6 +131,7 @@ const { ensureSchema } = require('./config/ensureSchema');
 ensureSchema().finally(() => {
   server.listen(PORT, () => {
     console.log(`Nanny API listening on http://localhost:${PORT}`);
+    require('./services/telegramService').setupTelegramWebhook();
   });
 });
 

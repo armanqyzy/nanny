@@ -1,5 +1,6 @@
 const fs = require('fs/promises');
 const path = require('path');
+const { isCloudStorageEnabled, uploadToCloud } = require('../services/cloudStorage');
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
@@ -75,6 +76,24 @@ async function uploadDocument(req, res) {
     return res.status(400).json({ error: `This file extension is not allowed for ${kind}` });
   }
   const safeName = sanitizeBaseName(path.basename(String(originalName), path.extname(String(originalName))));
+
+  if (isCloudStorageEnabled()) {
+    const uploaded = await uploadToCloud({
+      buffer: req.body,
+      mimeType,
+      folder: `nanny/${config.folder}/${req.user.id}`,
+    });
+    return res.status(201).json({
+      ok: true,
+      kind,
+      url: uploaded.url,
+      mime_type: mimeType,
+      original_name: originalName,
+      size: req.body.length,
+      storage: 'cloud',
+    });
+  }
+
   const relativeDir = path.join(config.folder, String(req.user.id));
   const absoluteDir = path.join(UPLOADS_DIR, relativeDir);
 

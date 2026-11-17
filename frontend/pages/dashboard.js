@@ -11,6 +11,7 @@ import IncomeChart from '../components/IncomeChart';
 import EmptyState from '../components/EmptyState';
 import OnboardingGuide from '../components/OnboardingGuide';
 import { avatarFallback } from '../lib/avatars';
+import TelegramConnectCard from '../components/TelegramConnectCard';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -946,6 +947,7 @@ export default function Dashboard() {
       )}
 
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
+        <TelegramConnectCard language={language} />
         <div className="card">
           <p className="text-xs uppercase tracking-[0.22em] opacity-60">{t.safety || 'Safety'}</p>
           <h3 className="mt-2 font-bold text-nanny-deepOrange">{t.emergencyTitle || 'Emergency and backup contact'}</h3>

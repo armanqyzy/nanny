@@ -15,7 +15,22 @@ async function createNotification({ userId, type, title, body, meta = {} }, opti
     options.io.to(`user:${userId}`).emit('notification:new', rows[0]);
   }
 
+  forwardToTelegram(userId, { title, body, meta }).catch((err) => console.error('Telegram alert failed:', err.message));
+
   return rows[0];
+}
+
+// Every in-app notification is copied to Telegram for users who connected the bot.
+async function forwardToTelegram(userId, { title, body, meta }) {
+  const telegram = require('./telegramService');
+  if (!telegram.isTelegramEnabled()) return;
+  const { rows } = await db.query('SELECT telegram_chat_id FROM users WHERE id = $1', [userId]);
+  const chatId = rows[0]?.telegram_chat_id;
+  if (!chatId) return;
+  const site = telegram.SITE_URL();
+  const page = meta?.booking_id ? '/bookings' : (meta?.sender_id || meta?.conversation_user_id) ? '/chat' : '/dashboard';
+  const lines = [`🐾 ${title}`, body, site ? `${site}${page}` : ''].filter(Boolean);
+  await telegram.sendTelegramMessage(chatId, lines.join('\n\n'));
 }
 
 async function listNotifications(userId) {
