@@ -5,6 +5,7 @@ import Icon from '../components/Icon';
 import { absoluteAssetUrl, api, currentUser, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 import { formatRating } from '../lib/rating';
+import { petSummaryLine } from '../lib/pets';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -1114,7 +1115,7 @@ export default function Dashboard() {
                    className="w-full h-32 object-cover" />
               <div className="p-3">
                 <div className="font-bold">{p.name}</div>
-                <div className="text-xs opacity-70">{p.pet_type}, {p.age}y, {p.size}</div>
+                <div className="text-xs opacity-70">{petSummaryLine(p, language)}</div>
               </div>
             </div>
           ))}

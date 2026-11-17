@@ -6,6 +6,7 @@ import Icon from '../../components/Icon';
 import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
+import { petSummaryLine } from '../../lib/pets';
 
 const SERVICE_HINTS = {
   en: {
@@ -323,7 +324,7 @@ export default function SitterPage() {
                       }`}
                     >
                       <div className="font-semibold">{p.name}</div>
-                      <div className="mt-1 text-sm opacity-70 capitalize">{p.pet_type} • {p.gender} • {p.size}</div>
+                      <div className="mt-1 text-sm opacity-70">{petSummaryLine(p, language)}</div>
                     </button>
                   );
                 })}

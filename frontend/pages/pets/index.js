@@ -5,6 +5,7 @@ import { absoluteAssetUrl, api, currentUser, uploadFile } from '../../lib/api';
 import Icon from '../../components/Icon';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useLanguage } from '../../lib/i18n';
+import { petSummaryLine } from '../../lib/pets';
 
 const EMPTY = {
   name: '', pet_type: 'dog', gender: 'boy', age: '',
@@ -64,6 +65,7 @@ export default function Pets() {
   const [aiMessage, setAiMessage] = useState('');
   const [formError, setFormError] = useState('');
   const [petToDelete, setPetToDelete] = useState(null);
+  const [pageError, setPageError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const t = {
     en: { petProfiles:'Pet profiles', petProfilesText:'Keep each pet card updated with care and health details.', healthNotes:'Health notes', healthNotesText:'Visible reminders for medicines, allergies and vaccinations.', quickAction:'Quick action', quickTitle:'Pet care stays clearer', quickText:'Photos from the media library, health reminders and behavior notes help sitters prepare faster.', noNotes:'No notes yet.', behavior:'Behavior:', health:'Health:', notSpecified:'Not specified', noHealth:'No health notes', edit:'Edit', delete:'Delete', addAnother:'Add another pet', createFirst:'Create first pet profile', addCardText:'Create a profile with photo, health notes and care preferences.', editor:'Pet profile editor', newProfile:'New pet profile', editTitle:'Edit pet profile', addPet:'Add my pet', addPetText:'Add the details a sitter needs before the first walk, stay or update.', close:'Close', profileCompletion:'Profile completion', completionText:'Photos, health details and behavior notes help sitters prepare faster.', general:'General information', generalText:'Start with the basics so bookings and recommendations stay accurate.', required:'Required', petType:'Pet type', gender:'Gender', age:'Age (years)', size:'Size', careLevel:'Care level', photoSection:'Photo from media library', photoText:'A real photo helps sitters recognize your pet right away.', replacePhoto:'Replace pet photo', choosePhoto:'Choose photo from media library', photoHint:'JPG, PNG or WEBP up to 5 MB. Clean, well-lit photos work best.', uploadPhoto:'Upload photo', selectedPhoto:'Photo selected from media library', previewPlaceholder:'Preview placeholder until you upload a photo', remove:'Remove', sitterNotes:'Care notes for sitters', sitterNotesText:'Describe temperament, health and any routines that matter during a booking.', aiWriting:'AI is writing...', improveAi:'Improve with AI', extraNotes:'Extra notes', livePreview:'Live preview', yourPetName:'Your pet name', defaultPreview:'Add a short sitter-facing note so care feels easier from the first booking.', addTemperament:'Add temperament notes', addHealth:'Add health notes', strongProfile:'What makes a strong pet profile', guide1:'Clear photo from your media library', guide2:'Real behavior notes, not just “good dog”', guide3:'Medication, allergies and feeding reminders', guide4:'Short sitter-facing description with routines', cancel:'Cancel', saveChanges:'Save changes', createProfile:'Create pet profile', deleteTitle:'Delete this pet profile?', deleteConfirm:'Delete pet', keepProfile:'Keep profile', customTypePlaceholder:'What kind of animal is it? Example: rabbit, hamster, turtle' },
@@ -122,6 +124,9 @@ export default function Pets() {
     if (form.pet_type === 'other' && !form.custom_pet_type.trim()) nextErrors.pet_type = 'Tell us what type of pet you have.';
     if (form.age === '') nextErrors.age = 'Add your pet age.';
     if (form.age !== '' && (Number(form.age) < 0 || Number(form.age) > 100)) nextErrors.age = 'Age should be between 0 and 100.';
+    else if (form.age !== '' && !Number.isInteger(Number(form.age))) {
+      nextErrors.age = 'Use whole years. For a puppy or kitten younger than 1 year, enter 0.';
+    }
 
     if (Object.keys(nextErrors).length) {
       setFieldErrors(nextErrors);
@@ -132,7 +137,8 @@ export default function Pets() {
     const payload = {
       ...form,
       description: buildDescriptionPayload(form),
-      age: Number(form.age) || null,
+      // 0 is a real age (younger than 1 year), so only an empty field becomes null.
+      age: form.age === '' ? null : Number(form.age),
       photo_url: form.photo_url || null,
     };
 
@@ -151,9 +157,14 @@ export default function Pets() {
 
   async function removeConfirmed() {
     if (!petToDelete) return;
-    await api.delete(`/api/pets/${petToDelete.id}`);
-    setPetToDelete(null);
-    reload();
+    try {
+      await api.delete(`/api/pets/${petToDelete.id}`);
+      setPetToDelete(null);
+      reload();
+    } catch (err) {
+      setPetToDelete(null);
+      setPageError(err.message || 'Could not delete this pet.');
+    }
   }
 
   function editPet(p) {
@@ -209,8 +220,9 @@ export default function Pets() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setPhotoError('Please choose an image file.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      // iPhone photos are often HEIC, which the server does not accept.
+      setPhotoError('Please choose a JPG, PNG or WEBP photo. iPhone HEIC photos are not supported yet: export or screenshot the photo as JPG first.');
       event.target.value = '';
       return;
     }
@@ -250,6 +262,9 @@ export default function Pets() {
 
   return (
     <DashboardLayout title="My pets">
+      {pageError && (
+        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{pageError}</div>
+      )}
       <section className="grid gap-4 md:grid-cols-3 mb-6">
         <div className="card">
           <p className="text-xs uppercase tracking-[0.18em] opacity-60">{t.petProfiles || 'Pet profiles'}</p>
@@ -280,7 +295,7 @@ export default function Pets() {
                 <div>
                   <h3 className="font-bold text-lg">{p.name}</h3>
                   <p className="text-xs opacity-70">
-                    {p.pet_type} • {p.gender} • {p.age || '?'}y • {p.size}
+                    {petSummaryLine(p, language)}
                   </p>
                 </div>
                 <span className="badge bg-nanny-yellow/80 text-nanny-brownish capitalize">{p.care_type}</span>
@@ -437,7 +452,7 @@ export default function Pets() {
                         </div>
                       </div>
                       <div>
-                        <input className={`input ${fieldErrors.age ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="number" min="0" max="100" placeholder={t.age || 'Age (years)'}
+                        <input className={`input ${fieldErrors.age ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="number" min="0" max="100" step="1" placeholder={t.age || 'Age (years)'}
                                value={form.age} onChange={(e) => {
                                  setForm({ ...form, age: e.target.value });
                                  clearFieldError('age');
@@ -507,7 +522,7 @@ export default function Pets() {
                         <span className="btn-ghost mt-4 whitespace-nowrap px-4 py-2 text-sm">{t.uploadPhoto || 'Upload photo'}</span>
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp,image/*"
+                          accept="image/jpeg,image/png,image/webp"
                           className="hidden"
                           onChange={handlePhotoChange}
                         />
