@@ -223,7 +223,7 @@ export default function SitterPage() {
             <p className="mt-3 leading-7">{sitter.description}</p>
 
             <div className="mt-4 flex flex-wrap gap-3 text-sm">
-              <span className="badge bg-nanny-yellow">⭐ {Number(sitter.rating).toFixed(1)} ({sitter.reviews?.length ?? sitter.rating_count})</span>
+              <span className="badge bg-nanny-yellow">⭐ {Number(sitter.reviews?.length ?? sitter.rating_count) > 0 ? `${Number(sitter.rating).toFixed(1)} (${sitter.reviews?.length ?? sitter.rating_count})` : (language === 'ru' ? 'Новый' : language === 'kz' ? 'Жаңа' : 'New')}</span>
               <span className="badge bg-nanny-orange text-white">{sitter.experience_yrs}y experience</span>
               <span className="badge bg-nanny-blue text-white">{Number(sitter.price_per_day).toLocaleString()} ₸ / day</span>
             </div>
@@ -304,7 +304,9 @@ export default function SitterPage() {
                 })}
                 {pets.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-nanny-orange/25 bg-white p-4 text-sm opacity-70">
-                    {t.noPetsYet || 'No pets yet. Add your pet profile first.'}
+                    {currentUser()
+                      ? (t.noPetsYet || 'No pets yet. Add your pet profile first.')
+                      : (language === 'ru' ? 'Войдите, чтобы выбрать питомца и забронировать.' : language === 'kz' ? 'Жануарды таңдап, брондау үшін кіріңіз.' : 'Sign in to choose your pet and book this sitter.')}
                   </div>
                 )}
               </div>
@@ -331,7 +333,7 @@ export default function SitterPage() {
                       }`}
                     >
                       <div className="font-semibold">{service.replace('_', ' ')}</div>
-                      <div className="mt-1 text-sm opacity-70">
+                      <div className="mt-1 text-sm normal-case opacity-70">
                         {service === 'walking' && 'A walk or outdoor activity session'}
                         {service === 'daycare' && 'Care during the day without overnight stay'}
                         {service === 'boarding' && 'Overnight stay and longer care'}

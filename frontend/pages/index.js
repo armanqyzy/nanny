@@ -411,9 +411,10 @@ export default function Home() {
               <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }}
                 src="https://images.unsplash.com/photo-1517849845537-4d257902454a?w=1400&auto=format&fit=crop"
                 alt="Happy dog with sitter"
-                className="h-[420px] w-full rounded-[28px] object-cover"
+                className="h-[300px] w-full rounded-[28px] object-cover object-center md:h-[340px]"
               />
-              <div className="absolute bottom-8 left-8 right-8 rounded-[28px] bg-white/92 p-5 shadow-lg backdrop-blur">
+              {/* Card sits under the photo instead of on top of it, so the dog stays visible. */}
+              <div className="mt-4 rounded-[28px] bg-white/92 p-5">
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-nanny-deepOrange/70">{copy.whyOwnersChoose}</p>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <div className="rounded-2xl bg-nanny-cream/80 p-4">

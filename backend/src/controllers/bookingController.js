@@ -40,6 +40,16 @@ function pastDateError(startDate, startTime) {
   return null;
 }
 
+// Price per day for the chosen service; falls back to the sitter's general daily price.
+async function getDailyPrice(sitterId, service, fallbackPrice) {
+  const { rows } = await db.query(
+    'SELECT price FROM sitter_services WHERE sitter_id = $1 AND service = $2 LIMIT 1',
+    [sitterId, service]
+  );
+  const price = rows[0]?.price ?? fallbackPrice;
+  return Number(price || 0);
+}
+
 async function findBookingConflicts({ sitterId, startDate, endDate, startTime, endTime, excludeBookingId = null }) {
   const params = [sitterId, startDate, endDate];
   let sql = `
@@ -116,7 +126,7 @@ async function create(req, res) {
     1,
     Math.ceil((new Date(end_date) - new Date(start_date)) / 86400000) + 1
   );
-  const total = days * Number(sRows[0].price_per_day);
+  const total = days * await getDailyPrice(sitter_id, service, sRows[0].price_per_day);
 
   const { rows } = await db.query(
     `INSERT INTO bookings
@@ -347,7 +357,7 @@ async function rebook(req, res) {
 
   const { rows: sitterRows } = await db.query('SELECT price_per_day FROM sitters WHERE id = $1', [original.sitter_id]);
   const days = Math.max(1, Math.ceil((new Date(end_date) - new Date(start_date)) / 86400000) + 1);
-  const total = days * Number(sitterRows[0]?.price_per_day || 0);
+  const total = days * await getDailyPrice(original.sitter_id, original.service, sitterRows[0]?.price_per_day);
 
   const { rows } = await db.query(
     `INSERT INTO bookings
