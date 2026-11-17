@@ -80,4 +80,22 @@ async function listForSitter(req, res) {
   res.json(rows);
 }
 
-module.exports = { create, listForSitter };
+// PUT /api/reviews/:id/reply { reply } — the reviewed sitter answers a review (can edit the answer).
+async function reply(req, res) {
+  const text = String(req.body?.reply || '').trim();
+  if (text.length < 2) return res.status(400).json({ error: 'Reply is too short' });
+  if (text.length > 1000) return res.status(400).json({ error: 'Reply is too long (max 1000 characters)' });
+
+  const { rows } = await db.query(
+    `UPDATE reviews r
+        SET sitter_reply = $1, sitter_replied_at = NOW()
+       FROM sitters s
+      WHERE r.id = $2 AND s.id = r.sitter_id AND s.user_id = $3
+      RETURNING r.id, r.sitter_reply, r.sitter_replied_at`,
+    [text, req.params.id, req.user.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Review not found or it is not about you' });
+  res.json(rows[0]);
+}
+
+module.exports = { create, listForSitter, reply };

@@ -38,6 +38,20 @@ const DAY_WORDS = {
 
 const SEND_TIMEOUT_MS = 15000;
 
+// Ready phrases shown above the message box. Sitters' own templates from their profile come first.
+const DEFAULT_QUICK_REPLIES = {
+  owner: {
+    en: ['Hi! Are you free on these dates?', 'Thank you! See you then.', 'How is my pet doing?'],
+    ru: ['Здравствуйте! Вы свободны в эти даты?', 'Спасибо! До встречи.', 'Как там мой питомец?'],
+    kz: ['Сәлеметсіз бе! Осы күндері бос боласыз ба?', 'Рақмет! Кездескенше.', 'Жануарым қалай?'],
+  },
+  sitter: {
+    en: ['Hi! Yes, these dates are free.', 'The walk went well, all good!', 'I am on my way.'],
+    ru: ['Здравствуйте! Да, эти даты свободны.', 'Прогулка прошла отлично, всё хорошо!', 'Я уже в пути.'],
+    kz: ['Сәлеметсіз бе! Иә, бос боламын.', 'Серуен жақсы өтті, бәрі жақсы!', 'Мен жолдамын.'],
+  },
+};
+
 function formatDayLabel(value, language = 'en') {
   const words = DAY_WORDS[language] || DAY_WORDS.en;
   const date = new Date(value);
@@ -107,6 +121,7 @@ export default function Chat() {
   const [chatError, setChatError] = useState('');
   // On phones only one panel fits: the conversation list or the open chat.
   const [mobileShowList, setMobileShowList] = useState(true);
+  const [sitterTemplates, setSitterTemplates] = useState([]);
   const socketRef = useRef(null);
   const activeRef = useRef(null);
   const meRef = useRef(null);
@@ -145,6 +160,11 @@ export default function Chat() {
       return;
     }
     setMe(user);
+    if (user.role === 'sitter') {
+      api.get('/api/sitters/me/dashboard')
+        .then((data) => setSitterTemplates((data?.sitter?.auto_reply_templates || []).filter((item) => String(item || '').trim())))
+        .catch(() => setSitterTemplates([]));
+    }
   }, [router]);
 
   useEffect(() => {
@@ -681,7 +701,12 @@ export default function Chat() {
               {chatError && (
                 <div className="mx-4 mb-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{chatError}</div>
               )}
-              <ChatInput disabled={!active} onSend={sendMessage} onTyping={notifyTyping} />
+              <ChatInput
+                quickReplies={me?.role === 'admin' ? [] : [
+                  ...sitterTemplates,
+                  ...((DEFAULT_QUICK_REPLIES[me?.role === 'sitter' ? 'sitter' : 'owner'] || {})[language] || []),
+                ]}
+                disabled={!active} onSend={sendMessage} onTyping={notifyTyping} />
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-center">

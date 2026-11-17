@@ -6,6 +6,7 @@ import { absoluteAssetUrl, api, currentUser, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 import { formatRating } from '../lib/rating';
 import { petSummaryLine } from '../lib/pets';
+import SitterAvailabilityPanel from '../components/SitterAvailabilityPanel';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -1004,6 +1005,14 @@ export default function Dashboard() {
               </div>
             </div>
           </section>
+
+          {sitterDashboard?.sitter && (
+            <SitterAvailabilityPanel
+              sitter={sitterDashboard.sitter}
+              language={language}
+              onSitterChange={(nextSitter) => setSitterDashboard((prev) => ({ ...prev, sitter: nextSitter }))}
+            />
+          )}
 
           <section className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="card">

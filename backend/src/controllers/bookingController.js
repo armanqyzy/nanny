@@ -1,5 +1,7 @@
 const db = require('../config/db');
 const { notifyUser, queueBookingReminder, clearBookingReminderJobs } = require('../services/alertService');
+const { chargeCard } = require('../services/paymentService');
+const { findDaysOffInRange } = require('./sitterController');
 
 function overlapsTime(startA, endA, startB, endB) {
   if (!startA || !endA || !startB || !endB) return true;
@@ -111,6 +113,21 @@ async function create(req, res) {
     return res.status(400).json({ error: 'This sitter is not available for public booking' });
   }
 
+  // Same pet, same sitter, same dates and time already requested: do not create a duplicate.
+  const { rows: duplicateRows } = await db.query(
+    `SELECT id FROM bookings
+      WHERE owner_id = $1 AND sitter_id = $2 AND pet_id = $3
+        AND start_date = $4::date AND end_date = $5::date
+        AND start_time IS NOT DISTINCT FROM $6::time
+        AND end_time IS NOT DISTINCT FROM $7::time
+        AND status IN ('pending', 'confirmed')
+      LIMIT 1`,
+    [req.user.id, sitter_id, pet_id, start_date, end_date, start_time || null, end_time || null]
+  );
+  if (duplicateRows[0]) {
+    return res.status(409).json({ error: 'You already have this booking request. Check your bookings page.' });
+  }
+
   const conflicts = await findBookingConflicts({
     sitterId: sitter_id,
     startDate: start_date,
@@ -120,6 +137,11 @@ async function create(req, res) {
   });
   if (conflicts.length) {
     return res.status(409).json({ error: 'This sitter is not available for the selected date and time.' });
+  }
+
+  const daysOff = await findDaysOffInRange(sitter_id, start_date, end_date);
+  if (daysOff.length) {
+    return res.status(409).json({ error: `The sitter does not work on: ${daysOff.join(', ')}. Choose other dates.` });
   }
 
   const days = Math.max(
@@ -267,7 +289,8 @@ async function updateStatus(req, res) {
 
   const { rows } = await db.query(
     `UPDATE bookings
-        SET status = $1
+        SET status = $1::varchar,
+            payment_status = CASE WHEN $1::varchar = 'cancelled' AND payment_status = 'paid' THEN 'refunded' ELSE payment_status END
       WHERE id = $2
      RETURNING *`,
     [status, req.params.id]
@@ -367,6 +390,11 @@ async function rebook(req, res) {
     return res.status(409).json({ error: 'This sitter is not available for the selected date and time.' });
   }
 
+  const rebookDaysOff = await findDaysOffInRange(original.sitter_id, start_date, end_date);
+  if (rebookDaysOff.length) {
+    return res.status(409).json({ error: `The sitter does not work on: ${rebookDaysOff.join(', ')}. Choose other dates.` });
+  }
+
   const { rows: sitterRows } = await db.query('SELECT price_per_day FROM sitters WHERE id = $1', [original.sitter_id]);
   const days = Math.max(1, Math.ceil((new Date(end_date) - new Date(start_date)) / 86400000) + 1);
   const total = days * await getDailyPrice(original.sitter_id, original.service, sitterRows[0]?.price_per_day);
@@ -393,4 +421,53 @@ async function rebook(req, res) {
   res.status(201).json(rows[0]);
 }
 
-module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings };
+// POST /api/bookings/:id/pay — owner pays a confirmed booking (demo provider, no real charge).
+async function pay(req, res) {
+  const bookingId = Number(req.params.id);
+  const { rows } = await db.query(
+    `SELECT b.*, s.user_id AS sitter_user_id, p.name AS pet_name
+       FROM bookings b
+       JOIN sitters s ON s.id = b.sitter_id
+       JOIN pets p ON p.id = b.pet_id
+      WHERE b.id = $1 AND b.owner_id = $2`,
+    [bookingId, req.user.id]
+  );
+  const booking = rows[0];
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  if (booking.payment_status === 'paid') return res.status(409).json({ error: 'This booking is already paid.' });
+  if (booking.status !== 'confirmed') {
+    return res.status(400).json({ error: 'You can pay only after the sitter confirms the booking.' });
+  }
+
+  let payment;
+  try {
+    payment = await chargeCard({
+      amount: Number(booking.total_price),
+      orderReference: `booking_${booking.id}`,
+      paymentCard: req.body?.payment || {},
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  const { rows: updated } = await db.query(
+    `UPDATE bookings
+        SET payment_status = 'paid', payment_reference = $1, payment_last4 = $2, paid_at = NOW()
+      WHERE id = $3 AND payment_status <> 'paid'
+      RETURNING *`,
+    [payment.payment_reference, payment.payment_last4, booking.id]
+  );
+  if (!updated[0]) return res.status(409).json({ error: 'This booking is already paid.' });
+
+  await notifyUser({
+    userId: booking.sitter_user_id,
+    type: 'booking_paid',
+    title: 'Booking paid',
+    body: `${booking.pet_name}'s booking was paid by the owner.`,
+    meta: { booking_id: booking.id },
+  }, { io: req.app.get('io') }).catch(() => {});
+
+  res.json(updated[0]);
+}
+
+module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings, pay };

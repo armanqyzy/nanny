@@ -7,6 +7,31 @@ import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 
+const EMPTY_PAYMENT = { card_holder: '', card_number: '', expiry: '', cvc: '' };
+
+// Short inline translations for the booking payment UI.
+function payText(language, key) {
+  const dict = {
+    pay: { en: 'Pay', ru: 'Оплатить', kz: 'Төлеу' },
+    paid: { en: 'Paid', ru: 'Оплачено', kz: 'Төленді' },
+    unpaid: { en: 'Not paid yet', ru: 'Ещё не оплачено', kz: 'Әлі төленбеген' },
+    refunded: { en: 'Refunded', ru: 'Возвращено', kz: 'Қайтарылды' },
+    payAfterConfirm: { en: 'Payment opens after the sitter confirms', ru: 'Оплата откроется после подтверждения ситтером', kz: 'Ситтер растағаннан кейін төлеуге болады' },
+    title: { en: 'Pay for booking', ru: 'Оплата бронирования', kz: 'Брондауды төлеу' },
+    demo: {
+      en: 'Demo payment: no money is charged. Use the test card 4242 4242 4242 4242, any future date and any 3 digits. Do not enter a real card.',
+      ru: 'Демо-оплата: деньги не списываются. Используйте тестовую карту 4242 4242 4242 4242, любую будущую дату и любые 3 цифры. Не вводите настоящую карту.',
+      kz: 'Демо төлем: ақша алынбайды. 4242 4242 4242 4242 тест картасын, кез келген болашақ күнді және кез келген 3 цифрды қолданыңыз. Нақты картаны енгізбеңіз.',
+    },
+    holder: { en: 'Card holder', ru: 'Имя на карте', kz: 'Карта иесі' },
+    number: { en: 'Card number', ru: 'Номер карты', kz: 'Карта нөмірі' },
+    expiry: { en: 'MM/YY', ru: 'ММ/ГГ', kz: 'АА/ЖЖ' },
+    cancel: { en: 'Cancel', ru: 'Отмена', kz: 'Болдырмау' },
+    paying: { en: 'Paying...', ru: 'Оплачиваем...', kz: 'Төленуде...' },
+  };
+  return dict[key]?.[language] || dict[key]?.en || key;
+}
+
 const STATUS_STYLES = {
   pending:   'bg-[#fff1cf] text-[#8d5c0b] border border-[#f0d27d]',
   confirmed: 'bg-[#eaf1ff] text-[#3158d6] border border-[#cddcff]',
@@ -43,6 +68,11 @@ export default function Bookings() {
   const [rebookForm, setRebookForm] = useState({ start_date: '', end_date: '', start_time: '', end_time: '' });
   const [rebookMessage, setRebookMessage] = useState('');
   const [statusError, setStatusError] = useState('');
+  const [busyBookingId, setBusyBookingId] = useState(null);
+  const [payBooking, setPayBooking] = useState(null);
+  const [payForm, setPayForm] = useState(EMPTY_PAYMENT);
+  const [payError, setPayError] = useState('');
+  const [paying, setPaying] = useState(false);
   const t = {
     en: {
       all: 'All', pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
@@ -160,11 +190,15 @@ export default function Bookings() {
   async function reload() { setData(await api.get('/api/bookings/mine')); }
 
   async function changeStatus(id, status) {
+    if (busyBookingId) return; // ignore repeated clicks while a change is being saved
     setStatusError('');
+    setBusyBookingId(id);
     try {
       await api.put(`/api/bookings/${id}/status`, { status });
     } catch (err) {
       setStatusError(err.message);
+    } finally {
+      setBusyBookingId(null);
     }
     reload();
   }
@@ -186,6 +220,31 @@ export default function Bookings() {
       }, 900);
     } catch (err) {
       setReviewMessage(err.message);
+    }
+  }
+
+  async function submitPayment() {
+    if (!payBooking || paying) return;
+    const [mm, yy] = payForm.expiry.split('/').map((part) => part.trim());
+    setPaying(true);
+    setPayError('');
+    try {
+      await api.post(`/api/bookings/${payBooking.id}/pay`, {
+        payment: {
+          cardholder_name: payForm.card_holder.trim(),
+          card_number: payForm.card_number.replace(/\D/g, ''),
+          expiry_month: Number(mm),
+          expiry_year: Number(yy),
+          cvc: payForm.cvc.trim(),
+        },
+      });
+      setPayBooking(null);
+      setPayForm(EMPTY_PAYMENT);
+      reload();
+    } catch (err) {
+      setPayError(err.message);
+    } finally {
+      setPaying(false);
     }
   }
 
@@ -269,6 +328,31 @@ export default function Bookings() {
             </div>
           </div>
 
+          {b.status !== 'cancelled' || b.payment_status === 'refunded' ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              {b.payment_status === 'paid' && (
+                <span className="badge bg-green-100 text-green-700">✓ {payText(language, 'paid')}{b.payment_last4 ? ` •••• ${b.payment_last4}` : ''}</span>
+              )}
+              {b.payment_status === 'refunded' && (
+                <span className="badge bg-nanny-blue/10 text-nanny-blue">{payText(language, 'refunded')}</span>
+              )}
+              {(!b.payment_status || b.payment_status === 'unpaid') && b.status !== 'cancelled' && (
+                <span className="badge bg-nanny-yellow/70 text-nanny-brownish">
+                  {b.status === 'pending' ? payText(language, 'payAfterConfirm') : payText(language, 'unpaid')}
+                </span>
+              )}
+              {role === 'owner' && b.status === 'confirmed' && (!b.payment_status || b.payment_status === 'unpaid') && (
+                <button
+                  type="button"
+                  className="btn-primary text-sm"
+                  onClick={() => { setPayBooking(b); setPayForm(EMPTY_PAYMENT); setPayError(''); }}
+                >
+                  {payText(language, 'pay')} {Number(b.total_price).toLocaleString()} ₸
+                </button>
+              )}
+            </div>
+          ) : null}
+
           {b.notes && (
             <div className="mt-4 rounded-2xl border border-nanny-orange/10 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-nanny-brownish/45">{t.careNote || 'Care note'}</p>
@@ -276,17 +360,6 @@ export default function Bookings() {
             </div>
           )}
 
-          {['confirmed', 'completed'].includes(b.status) && (
-            <div className="mt-4 rounded-2xl border border-nanny-orange/10 bg-[#fff8ef] p-4">
-              <div className="flex items-center gap-2 text-nanny-deepOrange">
-                <Icon name="support" className="h-4 w-4" />
-                <p className="text-sm font-semibold">{t.liveUpdates || 'Live pet updates'}</p>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-nanny-brownish/75">
-                {t.liveUpdatesText || 'Updates appear here when the sitter sends a note, photo or status from the booking card.'}
-              </p>
-            </div>
-          )}
 
           <div className="mt-5 flex flex-wrap gap-2">
             <button
@@ -297,13 +370,13 @@ export default function Bookings() {
               {role === 'owner' ? (t.messageSitter || 'Message sitter') : (t.messageOwner || 'Message owner')}
             </button>
             {role === 'sitter' && b.status === 'pending' && (
-              <button onClick={() => changeStatus(b.id, 'confirmed')} className="btn-primary text-sm">{t.confirm || 'Confirm'}</button>
+              <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'confirmed')} className="btn-primary text-sm">{t.confirm || 'Confirm'}</button>
             )}
             {role === 'sitter' && b.status === 'confirmed' && (
-              <button onClick={() => changeStatus(b.id, 'completed')} className="btn-secondary text-sm">{t.markCompleted || 'Mark completed'}</button>
+              <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'completed')} className="btn-secondary text-sm">{t.markCompleted || 'Mark completed'}</button>
             )}
             {['pending', 'confirmed'].includes(b.status) && (
-              <button onClick={() => changeStatus(b.id, 'cancelled')} className="btn-ghost text-sm text-red-600">{t.cancel || 'Cancel'}</button>
+              <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'cancelled')} className="btn-ghost text-sm text-red-600">{t.cancel || 'Cancel'}</button>
             )}
           </div>
 
@@ -475,6 +548,37 @@ export default function Bookings() {
             <div className="mt-5 flex justify-end gap-2">
               <button className="btn-ghost" onClick={() => setReviewBooking(null)}>{t.cancel || 'Cancel'}</button>
               <button className="btn-primary" onClick={submitReview}>{t.submitReview || 'Submit review'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {payBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !paying && setPayBooking(null)}>
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-nanny-deepOrange">{payText(language, 'title')}</h3>
+            <p className="mt-1 text-sm opacity-70">
+              {payBooking.sitter_name} • {payBooking.pet_name} • {Number(payBooking.total_price).toLocaleString()} ₸
+            </p>
+            <p className="mt-3 rounded-2xl bg-nanny-blue/5 p-3 text-xs leading-5 text-nanny-blue">{payText(language, 'demo')}</p>
+            <div className="mt-4 grid gap-3">
+              <input className="input" placeholder={payText(language, 'holder')} value={payForm.card_holder}
+                     onChange={(e) => setPayForm({ ...payForm, card_holder: e.target.value })} />
+              <input className="input" inputMode="numeric" placeholder={payText(language, 'number')} value={payForm.card_number}
+                     onChange={(e) => setPayForm({ ...payForm, card_number: e.target.value.replace(/[^\d ]/g, '').slice(0, 23) })} />
+              <div className="grid grid-cols-2 gap-3">
+                <input className="input" placeholder={payText(language, 'expiry')} value={payForm.expiry}
+                       onChange={(e) => setPayForm({ ...payForm, expiry: e.target.value.replace(/[^\d/]/g, '').slice(0, 5) })} />
+                <input className="input" inputMode="numeric" placeholder="CVC" value={payForm.cvc}
+                       onChange={(e) => setPayForm({ ...payForm, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
+              </div>
+            </div>
+            {payError && <p className="mt-3 text-sm text-red-600">{payError}</p>}
+            <div className="mt-5 flex gap-2">
+              <button type="button" className="btn-ghost flex-1" disabled={paying} onClick={() => setPayBooking(null)}>{payText(language, 'cancel')}</button>
+              <button type="button" className="btn-primary flex-1" disabled={paying} onClick={submitPayment}>
+                {paying ? payText(language, 'paying') : `${payText(language, 'pay')} ${Number(payBooking.total_price).toLocaleString()} ₸`}
+              </button>
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ import Footer from '../components/Footer';
 import BrandLogo from '../components/BrandLogo';
 import Icon from '../components/Icon';
 import { useLanguage } from '../lib/i18n';
-import { currentUser } from '../lib/api';
+import { api, currentUser } from '../lib/api';
 
 const HOME_COPY = {
   en: {
@@ -215,15 +215,27 @@ const HOME_COPY = {
 };
 
 function Stars({ rating, accent = 'orange' }) {
-  const filled = Math.round(rating);
   const active = accent === 'blue' ? 'text-nanny-blue' : 'text-nanny-orange';
+  const value = Math.max(0, Math.min(5, Number(rating) || 0));
   return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span key={index} className={`text-sm ${index < filled ? active : 'text-nanny-orange/20'}`}>★</span>
-      ))}
+    <div className="flex items-center gap-1" aria-label={`${value} / 5`}>
+      {Array.from({ length: 5 }).map((_, index) => {
+        // Each star is filled by the part of the rating that falls on it (e.g. 4.6 -> 4 full + 60%).
+        const fill = Math.max(0, Math.min(1, value - index));
+        return (
+          <span key={index} className="relative inline-block text-sm text-nanny-orange/20">
+            ★
+            <span className={`absolute inset-0 overflow-hidden ${active}`} style={{ width: `${fill * 100}%` }}>★</span>
+          </span>
+        );
+      })}
     </div>
   );
+}
+
+function reviewAvatar(review) {
+  if (review.avatar) return review.avatar;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Nanny')}&background=F29A4D&color=fff&bold=true`;
 }
 
 function ReviewShowcase({
@@ -237,6 +249,7 @@ function ReviewShowcase({
   verifiedPlatformReviewLabel,
   trustedReviewLabel,
   leaveReviewLabel,
+  averageRating = null,
 }) {
   const accentClasses = accent === 'blue'
     ? {
@@ -259,15 +272,16 @@ function ReviewShowcase({
   return (
     <section className="px-6 py-16">
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+        {/* With few real reviews show only the featured one; the grid and ticker need more to look full. */}
+        <div className={`grid gap-6 ${reviews.length >= 3 ? 'lg:grid-cols-[0.95fr_1.05fr]' : 'mx-auto max-w-3xl'}`}>
           <div className={`relative overflow-hidden rounded-[34px] border border-nanny-orange/15 p-8 ${accentClasses.cardGlow} ${accentClasses.shell}`}>
             <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accentClasses.line}`} />
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-nanny-deepOrange/60">{eyebrow}</p>
             <h2 className="mt-4 text-3xl font-bold leading-tight text-nanny-blue">{title}</h2>
             <p className="mt-4 max-w-md text-sm leading-7 text-nanny-brownish/80">{description}</p>
             <div className="mt-4 flex items-center gap-3">
-              <Stars rating={reviews[0].rating} accent={accent} />
-              <span className={`text-sm font-semibold ${accentClasses.score}`}>{reviews[0].rating.toFixed(1)}</span>
+              <Stars rating={averageRating ?? reviews[0].rating} accent={accent} />
+              <span className={`text-sm font-semibold ${accentClasses.score}`}>{Number(averageRating ?? reviews[0].rating).toFixed(1)}</span>
             </div>
 
             <div className="mt-8 rounded-[28px] bg-white/92 p-6 shadow-sm">
@@ -288,7 +302,7 @@ function ReviewShowcase({
 
               <div className="mt-6 flex items-center gap-4">
                 <img
-                  src={`https://i.pravatar.cc/150?img=${avatarOffset + 1}`}
+                  src={reviewAvatar(reviews[0])}
                   alt={reviews[0].name}
                   className="h-14 w-14 rounded-2xl object-cover"
                 />
@@ -306,22 +320,23 @@ function ReviewShowcase({
             </div>
           </div>
 
+          {reviews.length >= 3 && (
           <div className="grid gap-4 md:grid-cols-2 md:grid-rows-2">
             {reviews.slice(0, 4).map((review, index) => (
               <article
-                key={review.name}
+                key={review.id || review.name}
                 className="surface-soft flex h-full min-h-[248px] flex-col justify-between rounded-[30px] border border-nanny-orange/15 bg-white p-6 shadow-[0_20px_45px_rgba(130,93,47,0.10)]"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <img
-                      src={`https://i.pravatar.cc/150?img=${avatarOffset + index + 1}`}
+                      src={reviewAvatar(review)}
                       alt={review.name}
                       className="h-16 w-16 rounded-[22px] object-cover"
                     />
                     <div>
                       <p className="text-xl font-bold text-nanny-deepOrange">{review.name}</p>
-                      <p className="text-xs uppercase tracking-[0.18em] opacity-50">{trustedReviewLabel}</p>
+                      <p className="text-xs uppercase tracking-[0.18em] opacity-50">{review.subtitle || trustedReviewLabel}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -337,8 +352,10 @@ function ReviewShowcase({
               </article>
             ))}
           </div>
+          )}
         </div>
 
+        {reviews.length >= 4 && (
         <div className="relative mt-6 overflow-hidden rounded-[30px] border border-nanny-orange/10 bg-white/70 px-4 py-4 shadow-sm">
           <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#fff8ea] to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#fff8ea] to-transparent" />
@@ -349,7 +366,7 @@ function ReviewShowcase({
                 className="flex min-w-[320px] items-center gap-4 rounded-[24px] border border-nanny-orange/12 bg-white px-5 py-4"
               >
                 <img
-                  src={`https://i.pravatar.cc/150?img=${avatarOffset + (index % reviews.length) + 1}`}
+                  src={reviewAvatar(review)}
                   alt={review.name}
                   className="h-12 w-12 rounded-2xl object-cover"
                 />
@@ -364,6 +381,7 @@ function ReviewShowcase({
             ))}
           </div>
         </div>
+        )}
       </div>
     </section>
   );
@@ -374,7 +392,36 @@ export default function Home() {
   const copy = HOME_COPY[language] || HOME_COPY.en;
   // Signed-in users should not be asked to register again.
   const [signedIn, setSignedIn] = useState(false);
-  useEffect(() => { setSignedIn(Boolean(currentUser())); }, []);
+  const [homeData, setHomeData] = useState(null);
+  useEffect(() => {
+    setSignedIn(Boolean(currentUser()));
+    // Real numbers and reviews from the database instead of hard-coded examples.
+    api.get('/api/public/home').then(setHomeData).catch(() => setHomeData(null));
+  }, []);
+  const realStats = homeData?.stats;
+  const statLabels = {
+    en: ['Completed bookings', 'Average sitter rating', 'Verified sitters'],
+    ru: ['Выполненных бронирований', 'Средний рейтинг ситтеров', 'Проверенных ситтеров'],
+    kz: ['Аяқталған брондаулар', 'Ситтерлердің орташа рейтингі', 'Тексерілген ситтерлер'],
+  }[language] || ['Completed bookings', 'Average sitter rating', 'Verified sitters'];
+  const stats = realStats
+    ? [
+        { value: String(realStats.completed_bookings), label: statLabels[0] },
+        {
+          value: realStats.review_count ? `${realStats.avg_rating.toFixed(1)}/5` : '—',
+          label: `${statLabels[1]}${realStats.review_count ? ` (${realStats.review_count})` : ''}`,
+        },
+        { value: String(realStats.verified_sitters), label: statLabels[2] },
+      ]
+    : copy.stats;
+  const aboutWord = language === 'ru' ? 'о ситтере' : language === 'kz' ? 'ситтер туралы' : 'about';
+  const realReviews = (homeData?.reviews || []).map((review) => ({
+    id: review.id,
+    name: review.author,
+    rating: Number(review.rating),
+    text: review.body,
+    subtitle: `${aboutWord} ${review.sitter_name}`,
+  }));
   const findSitterLabel = language === 'ru' ? 'Найти ситтера' : language === 'kz' ? 'Ситтер табу' : 'Find a sitter';
 
   return (
@@ -401,7 +448,7 @@ export default function Home() {
               <Link href="/map" className="btn-ghost">{copy.searchOnMap}</Link>
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-3 fade-up stagger-2">
-              {copy.stats.map((stat) => (
+              {stats.map((stat) => (
                 <div key={stat.label} className="rounded-[24px] bg-white p-4 shadow-[0_16px_36px_rgba(122,75,31,0.10)]">
                   <p className="text-2xl font-bold text-nanny-deepOrange">{stat.value}</p>
                   <p className="text-sm opacity-70">{stat.label}</p>
@@ -504,40 +551,29 @@ export default function Home() {
         </div>
       </section>
 
-      <ReviewShowcase
-        eyebrow={copy.ownerEyebrow}
-        title={copy.ownerTitle}
-        description={copy.ownerDescription}
-        reviews={copy.ownerReviews}
-        avatarOffset={30}
-        accent="orange"
-        featuredReviewLabel={copy.featuredReview}
-        verifiedPlatformReviewLabel={copy.verifiedPlatformReview}
-        trustedReviewLabel={copy.trustedReview}
-        leaveReviewLabel={copy.leaveReview}
-      />
-
-      <ReviewShowcase
-        eyebrow={copy.sitterEyebrow}
-        title={copy.sitterTitle}
-        description={copy.sitterDescription}
-        reviews={copy.sitterReviews}
-        avatarOffset={10}
-        accent="blue"
-        featuredReviewLabel={copy.featuredReview}
-        verifiedPlatformReviewLabel={copy.verifiedPlatformReview}
-        trustedReviewLabel={copy.trustedReview}
-        leaveReviewLabel={copy.leaveReview}
-      />
+      {realReviews.length > 0 && (
+        <ReviewShowcase
+          eyebrow={copy.ownerEyebrow}
+          title={copy.ownerTitle}
+          description={copy.ownerDescription}
+          reviews={realReviews}
+          averageRating={realStats?.avg_rating || null}
+          accent="orange"
+          featuredReviewLabel={copy.featuredReview}
+          verifiedPlatformReviewLabel={copy.verifiedPlatformReview}
+          trustedReviewLabel={copy.trustedReview}
+          leaveReviewLabel={copy.leaveReview}
+        />
+      )}
 
       {/* FAQ */}
-      <section className="bg-gradient-to-b from-[#3a2a22] to-[#2a1f1a] py-16 px-6 text-white">
-        <h2 className="text-center text-2xl font-bold text-nanny-yellow mb-8">{copy.faqTitle}</h2>
+      <section className="bg-[#fff8ea] py-16 px-6 text-nanny-brownish">
+        <h2 className="text-center text-2xl font-bold text-nanny-blue mb-8">{copy.faqTitle}</h2>
         <div className="max-w-3xl mx-auto space-y-4">
           {copy.faq.map((f, i) => (
-            <details key={i} className="bg-white/5 p-4 rounded-xl">
-              <summary className="cursor-pointer font-semibold">{f.q}</summary>
-              <p className="mt-2 text-sm text-white/80">{f.a}</p>
+            <details key={i} className="rounded-2xl border border-nanny-orange/15 bg-white p-4 shadow-sm">
+              <summary className="cursor-pointer font-semibold text-nanny-deepOrange">{f.q}</summary>
+              <p className="mt-2 text-sm text-nanny-brownish/80">{f.a}</p>
             </details>
           ))}
         </div>

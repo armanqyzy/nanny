@@ -35,7 +35,8 @@ export default function Sidebar() {
   const items = user?.role === 'admin'
     ? baseItems
     : [
-        ...baseItems,
+        // Sitters have no pets of their own, so the Pets page is only for owners.
+        ...baseItems.filter((item) => !(user?.role === 'sitter' && item.href === '/pets')),
         ...(user?.role === 'sitter'
           ? [{ href: '/verification', label: 'Verification', icon: 'admin', note: 'Docs & trust badge' }]
           : [{ href: '/support', label: 'Support', icon: 'support', note: 'FAQ & escalations' }]),

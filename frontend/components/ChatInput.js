@@ -14,7 +14,7 @@ function readFileAsDataUrl(file) {
   });
 }
 
-export default function ChatInput({ disabled, onSend, onTyping }) {
+export default function ChatInput({ disabled, onSend, onTyping, quickReplies = [] }) {
   const { language } = useLanguage();
   const t = {
     en: {
@@ -140,6 +140,22 @@ export default function ChatInput({ disabled, onSend, onTyping }) {
               <button type="button" className="font-semibold text-red-600" onClick={() => setFile(null)}>{t.remove || 'Remove'}</button>
             </div>
           )}
+        </div>
+      )}
+
+      {quickReplies.length > 0 && !disabled && (
+        // One tap puts a ready phrase into the message box; it can still be edited before sending.
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+          {quickReplies.map((phrase) => (
+            <button
+              key={phrase}
+              type="button"
+              className="shrink-0 rounded-full border border-nanny-orange/20 bg-white px-3 py-1.5 text-xs text-nanny-brownish hover:bg-nanny-cream"
+              onClick={() => setText((prev) => (prev ? `${prev} ${phrase}` : phrase))}
+            >
+              {phrase.length > 60 ? `${phrase.slice(0, 57)}...` : phrase}
+            </button>
+          ))}
         </div>
       )}
 

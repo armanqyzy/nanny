@@ -16,7 +16,7 @@ export default function SittersMapPage() {
     service: '',
     max_price: '',
     q: '',
-    min_rating: 4,
+    min_rating: '',
   });
   const [mapState, setMapState] = useState(parseMapStateFromQuery({}));
   const hasExplicitCenter = typeof router.query.lat === 'string' && typeof router.query.lng === 'string';
@@ -37,7 +37,7 @@ export default function SittersMapPage() {
       service: typeof router.query.service === 'string' ? router.query.service : '',
       max_price: typeof router.query.max_price === 'string' ? router.query.max_price : '',
       q: typeof router.query.q === 'string' ? router.query.q : '',
-      min_rating: Number.isFinite(parsedMinRating) && parsedMinRating > 0 ? parsedMinRating : 4,
+      min_rating: Number.isFinite(parsedMinRating) && parsedMinRating > 0 ? parsedMinRating : '',
     });
     setMapState(parsedMapState);
     lastSyncedQueryRef.current = new URLSearchParams(
@@ -47,7 +47,7 @@ export default function SittersMapPage() {
           service: typeof router.query.service === 'string' ? router.query.service : '',
           max_price: typeof router.query.max_price === 'string' ? router.query.max_price : '',
           q: typeof router.query.q === 'string' ? router.query.q : '',
-          min_rating: Number.isFinite(parsedMinRating) && parsedMinRating > 0 ? parsedMinRating : 4,
+          min_rating: Number.isFinite(parsedMinRating) && parsedMinRating > 0 ? parsedMinRating : '',
         },
         parsedMapState
       )
@@ -112,8 +112,9 @@ export default function SittersMapPage() {
             <select
               className="input min-w-[160px]"
               value={filters.min_rating}
-              onChange={(event) => setFilters((prev) => ({ ...prev, min_rating: Number(event.target.value) }))}
+              onChange={(event) => setFilters((prev) => ({ ...prev, min_rating: event.target.value === '' ? '' : Number(event.target.value) }))}
             >
+              <option value="">{language === 'ru' ? 'Любой (включая новых)' : language === 'kz' ? 'Кез келген (жаңаларды қоса)' : 'Any (incl. new sitters)'}</option>
               <option value={3}>3.0+</option>
               <option value={3.5}>3.5+</option>
               <option value={4}>4.0+</option>

@@ -28,6 +28,48 @@ const SERVICE_HINTS = {
 
 const EMPTY_BOOKING = { pet_id: '', service: 'walking', start_date: '', end_date: '', start_time: '', end_time: '', notes: '' };
 
+// Lets the sitter answer (or edit the answer to) a review on their own profile.
+function ReviewReplyForm({ review, language, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(review.sitter_reply || '');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const label = (en, ru, kz) => (language === 'ru' ? ru : language === 'kz' ? kz : en);
+
+  async function save() {
+    setSaving(true);
+    setError('');
+    try {
+      const saved = await api.put(`/api/reviews/${review.id}/reply`, { reply: text });
+      onSaved(saved);
+      setOpen(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="btn-ghost mt-2 text-xs" onClick={() => setOpen(true)}>
+        {review.sitter_reply ? label('Edit reply', 'Изменить ответ', 'Жауапты өзгерту') : label('Reply', 'Ответить', 'Жауап беру')}
+      </button>
+    );
+  }
+  return (
+    <div className="mt-2 space-y-2">
+      <textarea className="input min-h-[80px]" value={text} maxLength={1000} onChange={(e) => setText(e.target.value)}
+                placeholder={label('Thank the owner or explain politely...', 'Поблагодарите владельца или вежливо поясните...', 'Иесіне алғыс айтыңыз немесе сыпайы түсіндіріңіз...')} />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button type="button" className="btn-ghost text-xs" onClick={() => setOpen(false)}>{label('Cancel', 'Отмена', 'Болдырмау')}</button>
+        <button type="button" className="btn-primary text-xs" disabled={saving || text.trim().length < 2} onClick={save}>{label('Save reply', 'Сохранить ответ', 'Жауапты сақтау')}</button>
+      </div>
+    </div>
+  );
+}
+
 export default function SitterPage() {
   const { language } = useLanguage();
   const router = useRouter();
@@ -40,6 +82,11 @@ export default function SitterPage() {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [aiNotesLoading, setAiNotesLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [submittingBooking, setSubmittingBooking] = useState(false);
+  const [daysOff, setDaysOff] = useState([]);
+  const [viewer, setViewer] = useState(null);
+  useEffect(() => { setViewer(currentUser()); }, []);
+  const isOwnProfile = Boolean(viewer && sitter && viewer.id === sitter.user_id);
   const t = {
     en: {
       verified:'Verified', serviceZone:'Service zone', zoneDefault:'Almaty city areas by request', workingHours:'Working hours', flexible:'Flexible', availableByArrangement:'Available by arrangement', services:'Services', loading:'Loading…', bookThis:'Book this sitter', reviews:'Reviews', noReviews:'No reviews yet.',
@@ -87,6 +134,7 @@ export default function SitterPage() {
     if (!id) return;
     (async () => {
       const s = await api.get(`/api/sitters/${id}`);
+      api.get(`/api/sitters/${id}/days-off`).then((rows) => setDaysOff(rows.map((row) => row.day))).catch(() => setDaysOff([]));
       setSitter(s);
       if (s.services?.[0]) setBook((b) => ({ ...b, service: s.services[0].service }));
       if (currentUser()) {
@@ -141,6 +189,8 @@ export default function SitterPage() {
 
   async function makeBooking(e) {
     e.preventDefault();
+    // A second click while the first request is running used to create a duplicate booking.
+    if (submittingBooking) return;
     setMsg(null);
     if (!currentUser()) { router.push('/login'); return; }
     if (!pets.length) {
@@ -177,6 +227,7 @@ export default function SitterPage() {
     }
 
     setFieldErrors({});
+    setSubmittingBooking(true);
     try {
       await api.post('/api/bookings', {
         sitter_id: Number(id),
@@ -193,6 +244,8 @@ export default function SitterPage() {
       setMsg({ type: 'ok', text: 'Booking created! Check your bookings page.' });
     } catch (e) {
       setMsg({ type: 'err', text: e?.message || 'We could not create the booking yet. Please review the selected dates, times and required fields.' });
+    } finally {
+      setSubmittingBooking(false);
     }
   }
 
@@ -283,6 +336,19 @@ export default function SitterPage() {
         </div>
 
         <section className="card mt-6">
+          {sitter.is_available === false && (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              {language === 'ru' ? 'Ситтер сейчас на паузе и не принимает новые заказы.' : language === 'kz' ? 'Ситтер қазір үзілісте, жаңа тапсырыс қабылдамайды.' : 'This sitter is on a break and is not taking new bookings right now.'}
+            </div>
+          )}
+          {daysOff.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-nanny-orange/15 bg-[#fffaf3] px-4 py-3 text-sm">
+              <span className="font-semibold text-nanny-deepOrange">
+                {language === 'ru' ? 'Выходные ситтера' : language === 'kz' ? 'Ситтердің демалыс күндері' : 'Sitter days off'}:
+              </span>{' '}
+              {daysOff.slice(0, 20).map((day) => new Date(`${day}T00:00:00`).toLocaleDateString(language === 'ru' ? 'ru-RU' : language === 'kz' ? 'kk-KZ' : 'en-US', { day: 'numeric', month: 'short' })).join(', ')}
+            </div>
+          )}
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-lg font-bold text-nanny-deepOrange">{t.bookThis || 'Book this sitter'}</h2>
@@ -472,7 +538,7 @@ export default function SitterPage() {
                 )}
               </div>
             )}
-            <button className="btn-primary w-full" disabled={checkingAvailability || (availability && !availability.available)}>{t.createBooking || 'Create booking'}</button>
+            <button className="btn-primary w-full" disabled={submittingBooking || checkingAvailability || (availability && !availability.available)}>{submittingBooking ? (language === 'ru' ? 'Создаём...' : language === 'kz' ? 'Жасалуда...' : 'Creating...') : (t.createBooking || 'Create booking')}</button>
             </div>
 
             <aside className="xl:sticky xl:top-24 h-fit">
@@ -566,7 +632,9 @@ export default function SitterPage() {
                     {availabilityTone === 'idle' && (t.chooseDatesHint || 'Once you choose dates, we will automatically check whether the sitter is free for this slot.')}
                     {availabilityTone === 'checking' && (t.checkingHint || 'We are checking confirmed bookings for this sitter right now.')}
                     {availabilityTone === 'available' && (t.availableHint || 'The current selection looks free and ready for booking.')}
-                    {availabilityTone === 'busy' && (t.busyHint || 'This slot overlaps with another confirmed booking. Try different dates or times.')}
+                    {availabilityTone === 'busy' && (availability?.days_off?.length
+                      ? `${language === 'ru' ? 'Ситтер не работает в эти дни' : language === 'kz' ? 'Ситтер бұл күндері жұмыс істемейді' : 'The sitter does not work on'}: ${availability.days_off.join(', ')}`
+                      : (t.busyHint || 'This slot overlaps with another confirmed booking. Try different dates or times.'))}
                   </p>
                 </div>
               </div>
@@ -585,6 +653,20 @@ export default function SitterPage() {
                     <span className="text-nanny-orange">⭐ {r.rating}</span>
                   </div>
                   <p className="text-sm mt-1">{r.body}</p>
+                  {r.sitter_reply && (
+                    <div className="mt-2 rounded-2xl border-l-4 border-nanny-orange/40 bg-[#fffaf3] px-3 py-2 text-sm">
+                      <p className="text-xs font-semibold text-nanny-deepOrange">
+                        {language === 'ru' ? 'Ответ ситтера' : language === 'kz' ? 'Ситтердің жауабы' : 'Sitter reply'}
+                      </p>
+                      <p className="mt-1">{r.sitter_reply}</p>
+                    </div>
+                  )}
+                  {isOwnProfile && (
+                    <ReviewReplyForm review={r} language={language} onSaved={(saved) => setSitter((prev) => ({
+                      ...prev,
+                      reviews: prev.reviews.map((item) => (item.id === saved.id ? { ...item, ...saved } : item)),
+                    }))} />
+                  )}
                 </li>
               ))}
             </ul>

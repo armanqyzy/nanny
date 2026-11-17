@@ -106,6 +106,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/public', require('./routes/public'));
 
 app.use(notFound);
 app.use(errorHandler);
@@ -124,6 +125,16 @@ server.on('error', (error) => {
   throw error;
 });
 
-server.listen(PORT, () => {
-  console.log(`Nanny API listening on http://localhost:${PORT}`);
+const { ensureSchema } = require('./config/ensureSchema');
+
+ensureSchema().finally(() => {
+  server.listen(PORT, () => {
+    console.log(`Nanny API listening on http://localhost:${PORT}`);
+  });
+});
+
+// A stray failed promise (for example an email or notification) must not crash the whole API,
+// otherwise every open request fails with "Failed to fetch" while the server restarts.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
 });

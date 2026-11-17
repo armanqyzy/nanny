@@ -29,16 +29,28 @@ export function absoluteAssetUrl(path) {
   return `${BASE}${path}`;
 }
 
-async function request(method, path, body) {
+const NETWORK_ERROR_TEXT = 'No connection to the server. It may be waking up, please try again in a few seconds.';
+
+async function request(method, path, body, attempt = 0) {
   const token = getToken();
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkError) {
+    // The free Render server sleeps and restarts; reads are safe to repeat once.
+    if (method === 'GET' && attempt === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return request(method, path, body, 1);
+    }
+    throw new Error(NETWORK_ERROR_TEXT);
+  }
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = null; }

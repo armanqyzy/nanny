@@ -240,7 +240,7 @@ async function getOne(req, res) {
   );
 
   const reviews = await db.query(
-    `SELECT r.rating, r.body, r.created_at, u.full_name AS author
+    `SELECT r.id, r.rating, r.body, r.created_at, r.sitter_reply, r.sitter_replied_at, u.full_name AS author
        FROM reviews r
        JOIN users u ON u.id = r.author_id
       WHERE r.sitter_id = $1 AND r.is_hidden = FALSE
@@ -280,6 +280,56 @@ async function getOne(req, res) {
   });
 }
 
+// Days the sitter marked as "not working" inside a date range (YYYY-MM-DD strings).
+async function findDaysOffInRange(sitterId, startDate, endDate) {
+  const { rows } = await db.query(
+    `SELECT to_char(day, 'YYYY-MM-DD') AS day
+       FROM sitter_unavailable_days
+      WHERE sitter_id = $1 AND day BETWEEN $2::date AND $3::date
+      ORDER BY day`,
+    [sitterId, startDate, endDate]
+  );
+  return rows.map((row) => row.day);
+}
+
+// GET /api/sitters/:id/days-off — upcoming days off, shown to owners before booking.
+async function getDaysOff(req, res) {
+  const { rows } = await db.query(
+    `SELECT to_char(day, 'YYYY-MM-DD') AS day, note
+       FROM sitter_unavailable_days
+      WHERE sitter_id = $1 AND day >= CURRENT_DATE
+      ORDER BY day
+      LIMIT 120`,
+    [req.params.id]
+  );
+  res.json(rows);
+}
+
+// PUT /api/sitters/me/days-off { days: ['2026-12-01', ...] } — replaces the sitter's upcoming days off.
+async function setMyDaysOff(req, res) {
+  const days = Array.isArray(req.body?.days) ? req.body.days : null;
+  if (!days) return res.status(400).json({ error: 'days must be a list of dates' });
+  const clean = [...new Set(days.map(String))].filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day));
+  if (clean.length > 120) return res.status(400).json({ error: 'Too many days off at once (max 120)' });
+
+  const { rows: sitterRows } = await db.query('SELECT id FROM sitters WHERE user_id = $1', [req.user.id]);
+  if (!sitterRows[0]) return res.status(404).json({ error: 'Sitter profile not found' });
+  const sitterId = sitterRows[0].id;
+
+  await db.query('DELETE FROM sitter_unavailable_days WHERE sitter_id = $1 AND day >= CURRENT_DATE', [sitterId]);
+  if (clean.length) {
+    await db.query(
+      `INSERT INTO sitter_unavailable_days (sitter_id, day)
+       SELECT $1, d::date FROM unnest($2::text[]) AS d
+        WHERE d::date >= CURRENT_DATE
+       ON CONFLICT (sitter_id, day) DO NOTHING`,
+      [sitterId, clean]
+    );
+  }
+  req.params.id = sitterId;
+  return getDaysOff(req, res);
+}
+
 async function getAvailability(req, res) {
   const { start_date, end_date, start_time, end_time } = req.query;
   if (!start_date || !end_date) {
@@ -301,9 +351,12 @@ async function getAvailability(req, res) {
     return start_time < row.end_time && end_time > row.start_time;
   });
 
+  const daysOff = await findDaysOffInRange(req.params.id, start_date, end_date);
+
   res.json({
-    available: conflicts.length === 0,
+    available: conflicts.length === 0 && daysOff.length === 0,
     conflicts,
+    days_off: daysOff,
     requested: {
       start_date,
       end_date,
@@ -554,6 +607,9 @@ async function getMyDashboard(req, res) {
 }
 
 module.exports = {
+  findDaysOffInRange,
+  getDaysOff,
+  setMyDaysOff,
   search,
   mapSearch,
   getOne,

@@ -17,7 +17,9 @@ function jsonRateLimit(options) {
 // Broad API limit to slow down brute force and scraping.
 const apiRateLimit = jsonRateLimit({
   windowMs: FIFTEEN_MINUTES,
-  max: isProduction ? 100 : 2000,
+  // 100 was too low: one dashboard visit makes ~10 requests, and a whole team
+  // testing from one Wi-Fi shares one IP, so requests started failing "every other time".
+  max: isProduction ? 1500 : 5000,
   message: 'Too many requests from this IP, please try again in 15 minutes.',
 });
 
