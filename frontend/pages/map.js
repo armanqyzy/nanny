@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
 import SittersMapExplorer from '../components/SittersMapExplorer';
-import { currentUser } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 import { buildSitterRouteQuery, parseMapStateFromQuery } from '../lib/sitterMapState';
 
@@ -23,13 +22,7 @@ export default function SittersMapPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (!currentUser()) {
-      router.replace({
-        pathname: '/login',
-        query: { next: router.asPath || '/map' },
-      });
-      return;
-    }
+    // The map is public: guests can look around and sign in only when they book.
     const parsedMapState = parseMapStateFromQuery(router.query);
     const parsedMinRating = Number(router.query.min_rating);
     setFilters({

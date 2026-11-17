@@ -7,6 +7,7 @@ import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 import { petSummaryLine } from '../../lib/pets';
+import { serviceName } from '../../lib/services';
 
 const SERVICE_HINTS = {
   en: {
@@ -347,8 +348,8 @@ export default function SitterPage() {
 
             <div className="mt-4 flex flex-wrap gap-3 text-sm">
               <span className="badge bg-nanny-yellow">⭐ {Number(sitter.reviews?.length ?? sitter.rating_count) > 0 ? `${Number(sitter.rating).toFixed(1)} (${sitter.reviews?.length ?? sitter.rating_count})` : (language === 'ru' ? 'Новый' : language === 'kz' ? 'Жаңа' : 'New')}</span>
-              <span className="badge bg-nanny-orange text-white">{sitter.experience_yrs}y experience</span>
-              <span className="badge bg-nanny-blue text-white">{Number(sitter.price_per_day).toLocaleString()} ₸ / day</span>
+              <span className="badge bg-nanny-orange text-white">{language === 'ru' ? `Опыт ${sitter.experience_yrs} г.` : language === 'kz' ? `Тәжірибе ${sitter.experience_yrs} жыл` : `${sitter.experience_yrs}y experience`}</span>
+              <span className="badge bg-nanny-blue text-white">{Number(sitter.price_per_day).toLocaleString()} ₸ / {language === 'ru' ? 'день' : language === 'kz' ? 'күн' : 'day'}</span>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2 text-sm">
@@ -370,7 +371,7 @@ export default function SitterPage() {
               <ul className="text-sm mt-1 space-y-1">
                 {sitter.services?.map((s) => (
                   <li key={s.id} className="flex justify-between">
-                    <span className="capitalize">{s.service.replace('_', ' ')}</span>
+                    <span>{serviceName(s.service, language)}</span>
                     <span className="font-semibold">{Number(s.price).toLocaleString()} ₸</span>
                   </li>
                 ))}
@@ -379,6 +380,27 @@ export default function SitterPage() {
           </div>
         </div>
 
+        {viewer && viewer.role !== 'owner' ? (
+          <section className="card mt-6">
+            {isOwnProfile ? (
+              <>
+                <h2 className="text-lg font-bold text-nanny-deepOrange">
+                  {language === 'ru' ? 'Это ваш публичный профиль' : language === 'kz' ? 'Бұл сіздің ашық профиліңіз' : 'This is your public profile'}
+                </h2>
+                <p className="mt-1 text-sm opacity-75">
+                  {language === 'ru' ? 'Так вас видят владельцы. Цены, описание и выходные меняются в личном кабинете.' : language === 'kz' ? 'Иелер сізді осылай көреді. Баға, сипаттама және демалыс күндері жеке кабинетте өзгереді.' : 'This is how owners see you. Prices, description and days off are edited in your dashboard.'}
+                </p>
+                <button type="button" onClick={() => router.push('/dashboard')} className="btn-primary mt-4">
+                  {language === 'ru' ? 'Редактировать профиль' : language === 'kz' ? 'Профильді өңдеу' : 'Edit profile'}
+                </button>
+              </>
+            ) : (
+              <p className="text-sm opacity-75">
+                {language === 'ru' ? 'Бронировать могут только аккаунты владельцев питомцев.' : language === 'kz' ? 'Тек үй жануарлары иелерінің аккаунттары броньдай алады.' : 'Only pet owner accounts can make bookings.'}
+              </p>
+            )}
+          </section>
+        ) : (
         <section className="card mt-6">
           {sitter.is_available === false && (
             <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
@@ -468,7 +490,7 @@ export default function SitterPage() {
                           : 'border-nanny-orange/20 bg-white text-nanny-brownish hover:bg-[#fff8ef]'
                       }`}
                     >
-                      <div className="font-semibold">{service.replace('_', ' ')}</div>
+                      <div className="font-semibold">{serviceName(service, language)}</div>
                       <div className="mt-1 text-sm normal-case opacity-70">
                         {(SERVICE_HINTS[language] || SERVICE_HINTS.en)[service] || ''}
                       </div>
@@ -722,6 +744,7 @@ export default function SitterPage() {
             </aside>
           </form>
         </section>
+        )}
 
         <section className="card mt-6">
           <h2 className="text-lg font-bold text-nanny-deepOrange mb-4">{t.reviews || 'Reviews'} ({sitter.reviews?.length || 0})</h2>

@@ -10,6 +10,8 @@ import { useLanguage } from '../../lib/i18n';
 export default function Shop() {
   const { language } = useLanguage();
   const router = useRouter();
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => { setSignedIn(Boolean(currentUser())); }, []);
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({});
   const [category, setCategory] = useState('');
@@ -216,12 +218,12 @@ export default function Shop() {
               <p><span className="font-semibold">{copy.delivery}</span> {STORE_INFO.deliveryNote}</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button onClick={() => router.push('/shop/orders')} className="btn-ghost">
+{signedIn && (<button onClick={() => router.push('/shop/orders')} className="btn-ghost">
                 <span className="inline-flex items-center gap-2">
                   <Icon name="booking" className="h-4 w-4" />
                   {copy.myOrders}
                 </span>
-              </button>
+              </button>)}
               <button onClick={() => router.push('/support')} className="btn-ghost">
                 <span className="inline-flex items-center gap-2">
                   <Icon name="support" className="h-4 w-4" />
@@ -364,23 +366,6 @@ export default function Shop() {
         </div>
       )}
 
-      <div className="card mt-8 bg-gradient-to-r from-white to-[#fff7ee]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-nanny-brownish/45">{copy.afterCheckout}</p>
-            <h3 className="mt-2 text-xl font-bold text-nanny-deepOrange">{copy.trackTitle}</h3>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-nanny-brownish/75">
-              {copy.trackText}
-            </p>
-          </div>
-          <Link href="/shop/orders" className="btn-secondary">
-            <span className="inline-flex items-center gap-2">
-              <Icon name="booking" className="h-4 w-4" />
-              {copy.openOrders}
-            </span>
-          </Link>
-        </div>
-      </div>
     </DashboardLayout>
   );
 }

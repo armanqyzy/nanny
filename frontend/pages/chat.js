@@ -583,7 +583,9 @@ export default function Chat() {
               <EmptyState
                 compact
                 title={(language === 'ru' ? 'Диалогов пока нет' : language === 'kz' ? 'Диалогтар әлі жоқ' : 'No conversations yet')}
-                text={(language === 'ru' ? 'Откройте профиль ситтера и нажмите «Написать», чтобы начать диалог.' : language === 'kz' ? 'Чатты бастау үшін ситтер профилін ашып, «Жазу» батырмасын басыңыз.' : 'Open a sitter profile and press "Message" to start a chat.')}
+                text={me?.role === 'owner'
+                  ? (language === 'ru' ? 'Откройте профиль ситтера и нажмите «Написать», чтобы начать диалог.' : language === 'kz' ? 'Чатты бастау үшін ситтер профилін ашып, «Жазу» батырмасын басыңыз.' : 'Open a sitter profile and press "Message" to start a chat.')
+                  : (language === 'ru' ? 'Здесь появятся диалоги, когда вам напишут владельцы или пользователи.' : language === 'kz' ? 'Сізге хат жазғанда диалогтар осында шығады.' : 'Conversations appear here once someone writes to you.')}
                 actionLabel={me?.role === 'owner' ? (language === 'ru' ? 'Найти ситтера' : language === 'kz' ? 'Ситтер табу' : 'Find a sitter') : null}
                 actionHref={me?.role === 'owner' ? '/sitters' : null}
               />

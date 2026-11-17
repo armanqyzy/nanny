@@ -10,6 +10,7 @@ import SitterAvailabilityPanel from '../components/SitterAvailabilityPanel';
 import IncomeChart from '../components/IncomeChart';
 import EmptyState from '../components/EmptyState';
 import OnboardingGuide from '../components/OnboardingGuide';
+import { avatarFallback } from '../lib/avatars';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -744,7 +745,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <span className="rounded-full border border-nanny-orange/15 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-nanny-deepOrange">
-                {user.role}
+                {({ owner: { ru: 'Владелец', kz: 'Иесі', en: 'Owner' }, sitter: { ru: 'Ситтер', kz: 'Ситтер', en: 'Sitter' }, admin: { ru: 'Админ', kz: 'Әкімші', en: 'Admin' } }[user.role] || {})[language] || user.role}
               </span>
             </div>
 
@@ -753,7 +754,8 @@ export default function Dashboard() {
                 <div className="absolute inset-0 rounded-full bg-nanny-orange/18 blur-2xl" />
                 <img
                   src={(user.avatar_url && absoluteAssetUrl(user.avatar_url)) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=F29A4D&color=fff`}
-                  alt={t.avatarPreview || 'avatar'}
+                  alt=""
+                  onError={avatarFallback(user)}
                   className="relative h-32 w-32 rounded-full border-[6px] border-white object-cover shadow-[0_18px_40px_rgba(242,154,77,0.22)]"
                 />
               </div>
@@ -794,10 +796,6 @@ export default function Dashboard() {
                 <Icon name="settings" className="h-4 w-4" />
                 {edit ? (t.cancel || 'Cancel') : (t.editProfile || 'Edit profile')}
               </button>
-              <a href="/support" className="btn-ghost inline-flex items-center gap-2">
-                <Icon name="support" className="h-4 w-4" />
-                {t.openSupport || 'Open support center'}
-              </a>
             </div>
           </div>
 

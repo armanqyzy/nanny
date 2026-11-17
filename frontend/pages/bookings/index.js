@@ -10,6 +10,7 @@ import PaymentCardForm from '../../components/PaymentCardForm';
 import { EMPTY_CARD, friendlyPaymentError, toPaymentPayload, validateCard } from '../../lib/payment';
 import ReportModal from '../../components/ReportModal';
 import EmptyState from '../../components/EmptyState';
+import { localeFor, serviceName } from '../../lib/services';
 
 const EMPTY_PAYMENT = EMPTY_CARD;
 
@@ -51,12 +52,17 @@ const STATUS_LABELS = {
   cancelled: 'Cancelled',
 };
 
-function formatServiceLabel(service) {
-  return String(service || '').replace(/_/g, ' ');
-}
+const STATUS_NAMES = {
+  ru: { pending: 'Ожидает', confirmed: 'Подтверждено', completed: 'Завершено', cancelled: 'Отменено' },
+  kz: { pending: 'Күтуде', confirmed: 'Расталды', completed: 'Аяқталды', cancelled: 'Бас тартылды' },
+  en: { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled' },
+};
 
-function formatDateRange(startDate, endDate) {
-  return `${new Date(startDate).toLocaleDateString()} → ${new Date(endDate).toLocaleDateString()}`;
+function formatDateRange(startDate, endDate, language) {
+  const fmt = (value) => new Date(value).toLocaleDateString(localeFor(language), { day: 'numeric', month: 'short', year: 'numeric' });
+  const start = fmt(startDate);
+  const end = fmt(endDate);
+  return start === end ? start : `${start} → ${end}`;
 }
 
 export default function Bookings() {
@@ -64,6 +70,9 @@ export default function Bookings() {
   const router = useRouter();
   const reviewFromQuery = router.query.review;
   const [data, setData] = useState({ asOwner: [], asSitter: [] });
+  const [viewerRole, setViewerRole] = useState('');
+  useEffect(() => { setViewerRole(currentUser()?.role || ''); }, []);
+  const isSitterViewer = viewerRole === 'sitter';
   const [filter, setFilter] = useState('all');
   const [reviewBooking, setReviewBooking] = useState(null);
   const [reviewForm, setReviewForm] = useState({ rating: 5, body: '' });
@@ -286,7 +295,7 @@ export default function Bookings() {
   function Card({ b, role }) {
     const contactName = role === 'owner' ? b.sitter_name : b.owner_name;
     const contactLabel = role === 'owner' ? (t.sitter || 'Sitter') : (t.owner || 'Owner');
-    const serviceLabel = formatServiceLabel(b.service);
+    const serviceLabel = serviceName(b.service, language);
 
     return (
       <div className="overflow-hidden rounded-[30px] border border-nanny-orange/12 bg-white shadow-card">
@@ -301,7 +310,7 @@ export default function Bookings() {
                 <span>{t.pet || 'Pet'}: {b.pet_name}</span>
               </div>
             </div>
-            <span className={`badge px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] ${STATUS_STYLES[b.status]}`}>{b.status}</span>
+            <span className={`badge px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] ${STATUS_STYLES[b.status]}`}>{(STATUS_NAMES[language] || STATUS_NAMES.en)[b.status] || b.status}</span>
           </div>
         </div>
         <div className="px-6 py-5">
@@ -311,7 +320,7 @@ export default function Bookings() {
                 <Icon name="calendar" className="h-4 w-4" />
                 <span className="text-xs uppercase tracking-[0.16em] font-semibold">{t.dates || 'Dates'}</span>
               </div>
-              <p className="mt-3 text-sm font-semibold text-nanny-brownish">{formatDateRange(b.start_date, b.end_date)}</p>
+              <p className="mt-3 text-sm font-semibold text-nanny-brownish">{formatDateRange(b.start_date, b.end_date, language)}</p>
             </div>
             <div className="rounded-2xl border border-nanny-orange/10 bg-[#fffaf3] p-4">
               <div className="flex items-center gap-2 text-nanny-deepOrange">
@@ -450,15 +459,17 @@ export default function Bookings() {
               {t.workspaceText || 'Track current bookings, open sitter conversations, review finished care and follow live updates in one place.'}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:w-[500px] xl:shrink-0">
             {[
-              [t.ownerBookings || 'Owner bookings', data.asOwner.length],
+              isSitterViewer
+                ? [t.asSitter || 'As sitter', data.asSitter.length]
+                : [t.ownerBookings || 'Owner bookings', data.asOwner.length],
               [t.pending || 'Pending', data.asOwner.filter((item) => item.status === 'pending').length + data.asSitter.filter((item) => item.status === 'pending').length],
               [t.confirmed || 'Confirmed', data.asOwner.filter((item) => item.status === 'confirmed').length + data.asSitter.filter((item) => item.status === 'confirmed').length],
               [t.completed || 'Completed', data.asOwner.filter((item) => item.status === 'completed').length + data.asSitter.filter((item) => item.status === 'completed').length],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-nanny-orange/10 bg-white px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-nanny-brownish/45">{label}</p>
+              <div key={label} className="rounded-2xl border border-nanny-orange/10 bg-white px-3 py-4">
+                <p className="text-xs font-semibold leading-4 text-nanny-brownish/60">{label}</p>
                 <p className="mt-2 text-2xl font-bold text-nanny-blue">{value}</p>
               </div>
             ))}
@@ -486,6 +497,10 @@ export default function Bookings() {
         <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{statusError}</div>
       )}
 
+      {/* Sitters see their own work first; the owner section only appears for them if they booked someone. */}
+      <div className="flex flex-col">
+      {(!isSitterViewer || data.asOwner.length > 0) && (
+      <div className={isSitterViewer ? 'mt-10' : ''}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-nanny-deepOrange">{t.asOwner || 'As owner'}</h2>
@@ -501,20 +516,30 @@ export default function Bookings() {
               actionHref="/sitters"
             /></div>}
       </div>
+      </div>
+      )}
 
-      {data.asSitter.filter((b) => filter === 'all' || b.status === filter).length > 0 && (
-        <>
-          <div className="mb-4 mt-10 flex items-center justify-between gap-3">
+      {(isSitterViewer || data.asSitter.filter((b) => filter === 'all' || b.status === filter).length > 0) && (
+        <div className={isSitterViewer ? 'order-first' : 'mt-10'}>
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-nanny-deepOrange">{t.asSitter || 'As sitter'}</h2>
               <p className="mt-1 text-sm text-nanny-brownish/70">{t.sitterText || 'Active care requests where you are the service provider.'}</p>
             </div>
           </div>
           <div className="grid xl:grid-cols-2 gap-5">
-            {data.asSitter.filter((b) => filter === 'all' || b.status === filter).map((b) => <Card key={b.id} b={b} role="sitter" />)}
+            {data.asSitter.filter((b) => filter === 'all' || b.status === filter).length
+              ? data.asSitter.filter((b) => filter === 'all' || b.status === filter).map((b) => <Card key={b.id} b={b} role="sitter" />)
+              : <div className="xl:col-span-2"><EmptyState
+                  title={(language === 'ru' ? 'Заказов пока нет' : language === 'kz' ? 'Тапсырыстар әлі жоқ' : 'No requests yet')}
+                  text={(language === 'ru' ? 'Когда владелец забронирует вас, заказ появится здесь. Заполненный профиль и фото помогают получать заказы чаще.' : language === 'kz' ? 'Иесі сізді броньдағанда, тапсырыс осында шығады. Толық профиль тапсырысты жиі алуға көмектеседі.' : 'When an owner books you, the request shows up here. A complete profile helps you get booked more often.')}
+                  actionLabel={(language === 'ru' ? 'Мой профиль' : language === 'kz' ? 'Менің профилім' : 'My profile')}
+                  actionHref="/dashboard"
+                /></div>}
           </div>
-        </>
+        </div>
       )}
+      </div>
 
       {reviewBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={() => setReviewBooking(null)}>

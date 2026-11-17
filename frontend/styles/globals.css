@@ -23,6 +23,11 @@ h1, h2, h3, h4, h5, h6 { @apply font-display; }
 .btn-secondary { @apply btn bg-nanny-orange text-white hover:bg-nanny-deepOrange hover:-translate-y-0.5 shadow-[0_14px_30px_rgba(233,122,31,0.24)]; }
 .btn-ghost { @apply btn bg-white text-nanny-brownish hover:bg-white hover:-translate-y-0.5 border border-nanny-orange/30 shadow-[0_10px_26px_rgba(122,75,31,0.06)]; }
 
+/* Phones: smaller header buttons so the logo and account actions fit on one line. */
+@media (max-width: 767px) {
+  .nav-actions .btn { padding: 0.45rem 0.75rem; font-size: 0.8125rem; }
+}
+
 .input {
   @apply w-full px-4 py-2.5 rounded-lg border border-nanny-orange/30 bg-white
          focus:outline-none focus:ring-2 focus:ring-nanny-blue/40 focus:border-nanny-blue;

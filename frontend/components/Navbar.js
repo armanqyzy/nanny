@@ -112,20 +112,22 @@ export default function Navbar() {
           <div className="flex flex-wrap items-center gap-4 md:grid md:grid-cols-[auto_1fr_auto] md:gap-6">
             <Link href="/" className="justify-self-start flex items-center gap-2 text-nanny-blue font-display text-2xl font-bold whitespace-nowrap">
               <BrandLogo size="sm" priority />
-              <span>Nanny</span>
+              <span className="max-[420px]:hidden">Nanny</span>
             </Link>
 
             <div className="hidden md:flex items-center justify-center gap-6 text-sm font-medium">
               <Link href="/sitters" className="hover:text-nanny-blue">{t('shell', 'sitters', 'Sitters')}</Link>
               <Link href="/shop"    className="hover:text-nanny-blue">{t('shell', 'shop', 'Shop')}</Link>
               <Link href="/map"     className="hover:text-nanny-blue">{t('shell', 'map', 'Map')}</Link>
-              <Link href="/safety"  className="hover:text-nanny-blue">{t('shell', 'safety', 'Safety')}</Link>
+              {/* Guests need trust info; signed-in users reach it from the dashboard. */}
+              {!user && <Link href="/safety"  className="hover:text-nanny-blue">{t('shell', 'safety', 'Safety')}</Link>}
               <Link href="/support" className="hover:text-nanny-blue">{t('shell', 'support', 'Support')}</Link>
-              <Link href="/chat"    className="hover:text-nanny-blue">{t('shell', 'messages', 'Messages')}</Link>
+              {user && <Link href="/chat"    className="hover:text-nanny-blue">{t('shell', 'messages', 'Messages')}</Link>}
             </div>
 
-            <div className="flex w-full flex-wrap items-center justify-between gap-2 md:justify-self-end md:w-auto md:justify-end">
-              <LanguageSwitcher />
+            <div className="nav-actions ml-auto flex flex-wrap items-center justify-end gap-2 md:ml-0 md:justify-self-end">
+              {/* On phones the language switcher moves into the scrollable row below to keep the header one line. */}
+              <div className="hidden md:block"><LanguageSwitcher /></div>
               {!user ? (
                 <>
                   <Link href="/login"    className="btn-ghost">{t('shell', 'signIn', 'Sign in')}</Link>
@@ -213,9 +215,10 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-                  <Link href="/dashboard" className="btn-ghost">{t('shell', 'myAccount', 'My Account')}</Link>
-                  {user.role === 'admin' && (
+                  {user.role === 'admin' ? (
                     <Link href="/admin" className="btn-ghost">{t('shell', 'admin', 'Admin')}</Link>
+                  ) : (
+                    <Link href="/dashboard" className="btn-ghost">{t('shell', 'myAccount', 'My Account')}</Link>
                   )}
                   <button onClick={logout} className="btn-secondary">{t('shell', 'logout', 'Logout')}</button>
                 </>
@@ -224,7 +227,8 @@ export default function Navbar() {
           </div>
 
           {/* Phones: the desktop links and the sidebar are hidden, so show a scrollable link row instead. */}
-          <div className="-mx-6 mt-3 flex gap-2 overflow-x-auto px-6 pb-1 text-sm font-medium md:hidden">
+          <div className="-mx-6 mt-3 flex items-center gap-2 overflow-x-auto px-6 pb-1 text-sm font-medium md:hidden">
+            <div className="shrink-0"><LanguageSwitcher /></div>
             {[
               ...(user?.role === 'admin' ? [
                 ['/admin', t('shell', 'admin', 'Admin')],
@@ -240,9 +244,9 @@ export default function Navbar() {
               ] : []),
               ['/sitters', t('shell', 'sitters', 'Sitters')],
               ['/map', t('shell', 'map', 'Map')],
-              ['/chat', t('shell', 'messages', 'Messages')],
+              ...(user ? [['/chat', t('shell', 'messages', 'Messages')]] : []),
               ['/shop', t('shell', 'shop', 'Shop')],
-              ['/safety', t('shell', 'safety', 'Safety')],
+              ...(!user ? [['/safety', t('shell', 'safety', 'Safety')]] : []),
               ['/support', t('shell', 'support', 'Support')],
             ].map(([href, label]) => {
               const isActive = router.asPath === href || router.asPath.startsWith(`${href}/`) || router.asPath.startsWith(`${href}?`);

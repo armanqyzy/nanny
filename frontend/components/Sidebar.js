@@ -41,6 +41,9 @@ export default function Sidebar() {
           ? [{ href: '/verification', label: 'Verification', icon: 'admin', note: 'Docs & trust badge' }]
           : [{ href: '/support', label: 'Support', icon: 'support', note: 'FAQ & escalations' }]),
       ];
+  // Guests have no workspace yet, so the sidebar would only lead to the login page.
+  if (!user) return null;
+
   return (
     <aside className="hidden md:flex w-24 lg:w-72 shrink-0 border-r border-nanny-orange/15 bg-white/70 px-4 py-5 backdrop-blur">
       <div className="sticky top-[98px] flex w-full flex-col gap-2">

@@ -378,10 +378,6 @@ export default function Orders() {
               {isAdmin ? t.adminDesc : t.ownerDesc}
             </p>
           </div>
-          <div className="rounded-2xl bg-nanny-cream/60 px-4 py-3 text-sm">
-            <p><span className="font-semibold">{t.shop}</span> {STORE_INFO.name}</p>
-            <p><span className="font-semibold">{t.phone}</span> <a className="text-nanny-blue hover:underline" href={`tel:${STORE_INFO.phone}`}>{STORE_INFO.phone}</a></p>
-          </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
           {!isAdmin && <button onClick={() => router.push('/shop')} className="btn-ghost">{t.backToShop}</button>}

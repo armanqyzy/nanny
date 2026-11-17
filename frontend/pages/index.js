@@ -537,7 +537,7 @@ export default function Home() {
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-nanny-deepOrange/60">{copy.howItWorksEyebrow}</p>
               <h2 className="mt-2 text-3xl font-bold text-nanny-blue">{copy.howItWorksTitle}</h2>
             </div>
-            <Link href="/chat" className="btn-ghost">{copy.openMessages}</Link>
+            {signedIn && <Link href="/chat" className="btn-ghost">{copy.openMessages}</Link>}
           </div>
           <div className="grid gap-5 md:grid-cols-3">
             {copy.steps.map(([title, text], index) => (
