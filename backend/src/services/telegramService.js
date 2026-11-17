@@ -88,6 +88,12 @@ async function handleUpdate(update) {
   if (text.startsWith('/start')) {
     const token = text.split(/\s+/)[1];
     if (!token) {
+      const { rows: linked } = await db.query('SELECT full_name FROM users WHERE telegram_chat_id = $1', [chatId]);
+      if (linked.length) {
+        const names = linked.map((row) => row.full_name).join(', ');
+        await sendTelegramMessage(chatId, `Вы уже подключены (${names}). Уведомления будут приходить сюда. Отключить: /stop`);
+        return;
+      }
       await sendTelegramMessage(chatId, 'Здравствуйте! Чтобы получать уведомления Nanny, откройте личный кабинет на сайте и нажмите «Подключить Telegram».');
       return;
     }
