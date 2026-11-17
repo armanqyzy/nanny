@@ -29,8 +29,19 @@ async function forwardToTelegram(userId, { title, body, meta }) {
   if (!chatId) return;
   const site = telegram.SITE_URL();
   const page = meta?.booking_id ? '/bookings' : (meta?.sender_id || meta?.conversation_user_id) ? '/chat' : '/dashboard';
-  const lines = [`🐾 ${title}`, body, site ? `${site}${page}` : ''].filter(Boolean);
-  await telegram.sendTelegramMessage(chatId, lines.join('\n\n'));
+  const buttons = [];
+  if (site && meta?.action === 'completed' && meta?.booking_id) {
+    buttons.push({ text: '⭐ Оставить отзыв', url: `${site}/bookings?review=${meta.booking_id}` });
+    buttons.push({ text: '🔁 Повторить бронь', url: `${site}/bookings?rebook=${meta.booking_id}` });
+  } else if (site) {
+    buttons.push({ text: 'Открыть Nanny', url: `${site}${page}` });
+  }
+  const text = [`🐾 ${title}`, body].filter(Boolean).join('\n\n');
+  if (meta?.photo_url && /^https:\/\//.test(meta.photo_url)) {
+    await telegram.sendTelegramPhoto(chatId, meta.photo_url, text, buttons);
+  } else {
+    await telegram.sendTelegramMessage(chatId, text, buttons);
+  }
 }
 
 async function listNotifications(userId) {

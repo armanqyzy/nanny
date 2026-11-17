@@ -37,26 +37,26 @@ async function sendOrderConfirmationEmail({ to, customerName, order, items }) {
     .join('\n');
 
   const text = [
-    `Hello ${customerName || 'there'},`,
+    `Здравствуйте, ${customerName || ''}!`,
     '',
-    `Your payment for order #${order.id} was successful.`,
-    `Order total: ${Number(order.total).toLocaleString()} ₸`,
-    `Payment status: ${order.payment_status}`,
-    `Card: •••• ${order.payment_last4 || '****'}`,
+    `Оплата заказа №${order.id} прошла успешно.`,
+    `Сумма заказа: ${Number(order.total).toLocaleString('ru-RU')} ₸`,
+    `Статус оплаты: ${order.payment_status === 'paid' ? 'оплачено' : order.payment_status}`,
+    `Карта: •••• ${order.payment_last4 || '****'}`,
     '',
-    'Items:',
+    'Товары:',
     itemLines,
     '',
-    'Delivery details:',
-    order.address || 'No address provided',
+    'Доставка:',
+    order.address || 'Самовывоз или адрес уточнит магазин',
     '',
-    'Thank you for choosing Nanny Pet Shop.',
+    'Спасибо, что выбрали зоомагазин Nanny!',
   ].join('\n');
 
   await transport.sendMail({
     from,
     to,
-    subject: `Nanny order #${order.id} payment confirmation`,
+    subject: `Nanny: заказ №${order.id} оплачен`,
     text,
   });
 

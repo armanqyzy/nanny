@@ -1,4 +1,5 @@
 const { createBookingUpdate, listBookingUpdates } = require('../services/petUpdateService');
+const { createNotification } = require('../services/notificationService');
 
 function socketEventName(type) {
   if (type === 'photo') return 'pet:photo';
@@ -34,6 +35,17 @@ async function create(req, res) {
       io.to(`user:${payload.booking.owner_id}`).emit(eventName, payload.update);
       io.to(`user:${payload.booking.sitter_user_id}`).emit(eventName, payload.update);
     }
+
+    // The owner gets every update in the bell and in Telegram (photos arrive as real photos there).
+    const pet = payload.booking.pet_name || 'питомцу';
+    const text = payload.update.body || payload.update.status_label || '';
+    createNotification({
+      userId: payload.booking.owner_id,
+      type: 'pet_update',
+      title: update_type === 'photo' ? `Новое фото: ${pet}` : `Новости о ${pet}`,
+      body: text || (update_type === 'photo' ? 'Ситтер прислал фото.' : 'Ситтер прислал обновление.'),
+      meta: { booking_id: payload.booking.id, photo_url: payload.update.photo_url || null },
+    }, { io }).catch((err) => console.error('[pet update] notify failed:', err.message));
 
     res.status(201).json(payload.update);
   } catch (error) {

@@ -141,15 +141,15 @@ async function forgotPassword(req, res) {
     const resetLink = `${frontendBase}/reset-password?token=${rawToken}`;
     await sendPlainEmail({
       to: user.email,
-      subject: 'Nanny password reset',
+      subject: 'Сброс пароля Nanny',
       text: [
-        `Hello ${user.full_name || 'there'},`,
+        `Здравствуйте, ${user.full_name || ''}!`,
         '',
-        'We received a request to reset your Nanny password.',
-        `Open this link to choose a new password: ${resetLink}`,
+        'Мы получили запрос на сброс пароля в Nanny.',
+        `Откройте ссылку, чтобы задать новый пароль: ${resetLink}`,
         '',
-        'This link expires in 1 hour.',
-        'If you did not request this change, you can ignore this email.',
+        'Ссылка действует 1 час.',
+        'Если вы не запрашивали сброс, просто проигнорируйте это письмо.',
       ].join('\n'),
     });
   }

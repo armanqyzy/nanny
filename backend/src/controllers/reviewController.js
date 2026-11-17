@@ -13,12 +13,19 @@ async function create(req, res) {
 
   // Ensure the booking belongs to the author and is completed
   const { rows: bk } = await db.query(
-    'SELECT id, sitter_id, status FROM bookings WHERE id=$1 AND owner_id=$2',
+    'SELECT id, sitter_id, status, end_date FROM bookings WHERE id=$1 AND owner_id=$2',
     [booking_id, req.user.id]
   );
   if (!bk[0]) return res.status(404).json({ error: 'Booking not found' });
   if (bk[0].status !== 'completed') {
     return res.status(400).json({ error: 'Review allowed only after booking is completed' });
+  }
+  // A sitter could mark care "completed" early; the owner judges it only once the care period is over.
+  const { todayInAppTimeZone, toDateString } = require('./bookingController');
+  const endDate = toDateString(bk[0].end_date);
+  if (endDate > todayInAppTimeZone()) {
+    const [y, m, d] = endDate.split('-');
+    return res.status(400).json({ error: `Отзыв можно оставить после окончания ухода (${d}.${m}.${y}).` });
   }
 
   try {
@@ -54,8 +61,8 @@ async function create(req, res) {
       await createNotification({
         userId: sitterRows[0].user_id,
         type: 'new_review',
-        title: 'New review',
-        body: `You received a new ${rating}-star review.`,
+        title: 'Новый отзыв',
+        body: `Вам оставили отзыв: ${'★'.repeat(Number(rating) || 0)} (${rating} из 5).`,
         meta: { booking_id, sitter_id: bk[0].sitter_id },
       }, { io: req.app.get('io') });
     }

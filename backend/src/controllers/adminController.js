@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { expireStalePendingBookings } = require('./bookingController');
 const { notifyUser } = require('../services/alertService');
+const { orderStatusRu, ticketStatusRu } = require('../utils/ruText');
 
 async function listUsers(_req, res) {
   const { rows } = await db.query(
@@ -246,12 +247,12 @@ async function updateOrderStatus(req, res) {
   await notifyUser({
     userId: rows[0].user_id,
     type: 'shop_order_status',
-    title: 'Shop order updated',
-    body: `Your shop order #${rows[0].id} is now ${status}.`,
+    title: 'Статус заказа изменился',
+    body: `Заказ №${rows[0].id}: ${orderStatusRu(status)}.`,
     meta: { order_id: rows[0].id, status },
-    emailSubject: `Shop order #${rows[0].id} status updated`,
-    emailText: `Your shop order #${rows[0].id} is now ${status}.`,
-    smsText: `Nanny: order #${rows[0].id} is now ${status}.`,
+    emailSubject: `Заказ №${rows[0].id}: ${orderStatusRu(status)}`,
+    emailText: `Статус заказа №${rows[0].id} в магазине Nanny: ${orderStatusRu(status)}.`,
+    smsText: `Nanny: заказ №${rows[0].id} ${orderStatusRu(status)}.`,
   });
   res.json(rows[0]);
 }
@@ -309,12 +310,12 @@ async function updateSupportTicket(req, res) {
     await notifyUser({
       userId: rows[0].user_id,
       type: 'support_update',
-      title: 'Support ticket updated',
-      body: `Your support request "${rows[0].subject}" is now ${status.replace('_', ' ')}.`,
+      title: 'Ответ поддержки',
+      body: `Обращение «${rows[0].subject}»: ${ticketStatusRu(status)}.${resolution_note ? ` Комментарий: ${resolution_note}` : ''}`,
       meta: { ticket_id: rows[0].id, status },
-      emailSubject: `Support update for "${rows[0].subject}"`,
-      emailText: `Your support request "${rows[0].subject}" is now ${status.replace('_', ' ')}.${resolution_note ? `\n\nSupport note: ${resolution_note}` : ''}`,
-      smsText: `Nanny support: "${rows[0].subject}" is now ${status.replace('_', ' ')}.`,
+      emailSubject: `Поддержка Nanny: «${rows[0].subject}»`,
+      emailText: `Обращение «${rows[0].subject}»: ${ticketStatusRu(status)}.${resolution_note ? `\n\nКомментарий поддержки: ${resolution_note}` : ''}`,
+      smsText: `Поддержка Nanny: «${rows[0].subject}» ${ticketStatusRu(status)}.`,
     });
   }
 

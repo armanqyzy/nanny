@@ -1,13 +1,14 @@
 const db = require('../config/db');
 const { createNotification } = require('./notificationService');
 const { sendPlainEmail } = require('./emailService');
+const { serviceRu, dateRu } = require('../utils/ruText');
 
-async function sendEmail({ to, subject, text, customerName = 'there' }) {
+async function sendEmail({ to, subject, text, customerName = '' }) {
   if (!to) return { skipped: true };
   return sendPlainEmail({
     to,
     subject,
-    text: `Hello ${customerName},\n\n${text}\n\nNanny Platform`,
+    text: `Здравствуйте, ${customerName}!\n\n${text}\n\nКоманда Nanny`,
   });
 }
 
@@ -131,8 +132,8 @@ async function queueBookingReminder({
   if (!contact) return;
 
   const dueAt = buildReminderDueAt(startDate, startTime);
-  const title = 'Upcoming pet care reminder';
-  const body = `${petName} has ${service} scheduled on ${toDateString(startDate)}${startTime ? ` at ${toTimeString(startTime)}` : ''}.`;
+  const title = 'Скоро уход за питомцем';
+  const body = `${petName}: ${serviceRu(service)} ${dateRu(startDate)}${startTime ? ` в ${toTimeString(startTime)}` : ''}.`;
 
   const jobs = [];
   if (contact.email) {

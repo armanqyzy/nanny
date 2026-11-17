@@ -3,6 +3,7 @@ const { notifyUser, queueBookingReminder, clearBookingReminderJobs } = require('
 const { chargeCard } = require('../services/paymentService');
 const { findDaysOffInRange } = require('./sitterController');
 const { OWNER_REASONS, SITTER_REASONS, refundFor, paymentStatusAfterRefund } = require('../services/cancellationPolicy');
+const { serviceRu, cancelReasonRu, money } = require('../utils/ruText');
 
 function overlapsTime(startA, endA, startB, endB) {
   if (!startA || !endA || !startB || !endB) return true;
@@ -193,18 +194,21 @@ async function create(req, res) {
     'SELECT u.id AS sitter_user_id FROM sitters s JOIN users u ON u.id = s.user_id WHERE s.id = $1',
     [sitter_id]
   );
+  // The login token holds only id and role, so look the owner's name up for the message.
+  const { rows: ownerRows } = await db.query('SELECT full_name FROM users WHERE id = $1', [req.user.id]);
+  const ownerName = ownerRows[0]?.full_name || 'Владелец';
   if (infoRows[0]) {
     const petNames = [...new Set(checked.map((c) => c.petName))].join(', ');
-    const what = created.length > 1 ? `${created.length} ${service} bookings` : service;
+    const what = created.length > 1 ? `${serviceRu(service)} (${created.length} дн.)` : serviceRu(service);
     await notifyUser({
       userId: infoRows[0].sitter_user_id,
       type: 'booking_request',
-      title: 'New booking request',
-      body: `${req.user.full_name || 'A pet owner'} requested ${what} for ${petNames}.`,
+      title: 'Новая заявка',
+      body: `${ownerName} просит: ${what} для ${petNames}. Подтвердите или отклоните заявку.`,
       meta: { booking_id: created[0].id, group_id: groupId },
-      emailSubject: 'New booking request on Nanny',
-      emailText: `${req.user.full_name || 'A pet owner'} requested ${what} for ${petNames}. Open Nanny to review the request.`,
-      smsText: `Nanny: new booking request for ${petNames}.`,
+      emailSubject: 'Новая заявка в Nanny',
+      emailText: `${ownerName} просит: ${what} для ${petNames}. Откройте Nanny, чтобы ответить на заявку.`,
+      smsText: `Nanny: новая заявка для ${petNames}.`,
     }, { io: req.app.get('io') });
   }
 
@@ -222,6 +226,37 @@ async function expireStalePendingBookings() {
         AND end_date < $1::date`,
     [todayInAppTimeZone()]
   );
+}
+
+// Reminds a sitter once about a request that starts today or tomorrow and is still unanswered.
+// Without it, a missed request silently expires and the owner is left without care.
+async function remindPendingRequests(io) {
+  const today = todayInAppTimeZone();
+  const { rows } = await db.query(
+    `UPDATE bookings b
+        SET pending_reminder_sent_at = NOW()
+       FROM sitters s, pets p, users owner
+      WHERE b.sitter_id = s.id AND p.id = b.pet_id AND owner.id = b.owner_id
+        AND b.status = 'pending'
+        AND b.pending_reminder_sent_at IS NULL
+        AND b.start_date BETWEEN $1::date AND ($1::date + 1)
+     RETURNING b.id, b.start_date, b.start_time, b.service, s.user_id AS sitter_user_id,
+               p.name AS pet_name, owner.full_name AS owner_name`,
+    [today]
+  );
+  for (const booking of rows) {
+    const when = toDateString(booking.start_date) === today ? 'сегодня' : 'завтра';
+    await notifyUser({
+      userId: booking.sitter_user_id,
+      type: 'booking_pending_reminder',
+      title: 'Заявка ждёт ответа',
+      body: `${booking.owner_name} ждёт ответа: ${serviceRu(booking.service)} для ${booking.pet_name} ${when}${booking.start_time ? ` в ${String(booking.start_time).slice(0, 5)}` : ''}. Подтвердите или отклоните заявку, иначе она отменится.`,
+      meta: { booking_id: booking.id },
+      emailSubject: 'Заявка ждёт вашего ответа',
+      emailText: `${booking.owner_name} ждёт ответа: ${serviceRu(booking.service)} для ${booking.pet_name} ${when}. Откройте Nanny и подтвердите или отклоните заявку.`,
+    }, { io }).catch((err) => console.error('[reminder] failed:', err.message));
+  }
+  return rows.length;
 }
 
 async function myBookings(req, res) {
@@ -383,12 +418,12 @@ async function updateStatus(req, res) {
     await notifyUser({
       userId: details.owner_id,
       type: 'booking_confirmed',
-      title: 'Booking confirmed',
-      body: `${details.sitter_name} confirmed your booking for ${details.pet_name}.`,
+      title: 'Бронирование подтверждено',
+      body: `${details.sitter_name} подтвердил(а) бронирование для ${details.pet_name}. Теперь его можно оплатить.`,
       meta: { booking_id: details.id },
-      emailSubject: 'Your booking was confirmed',
-      emailText: `${details.sitter_name} confirmed your booking for ${details.pet_name}. Open Nanny to see the full details.`,
-      smsText: `Nanny: ${details.sitter_name} confirmed booking for ${details.pet_name}.`,
+      emailSubject: 'Бронирование подтверждено',
+      emailText: `${details.sitter_name} подтвердил(а) бронирование для ${details.pet_name}. Подробности в Nanny.`,
+      smsText: `Nanny: ${details.sitter_name} подтвердил(а) бронь для ${details.pet_name}.`,
     }, { io });
     await clearBookingReminderJobs(details.id);
     await queueBookingReminder({
@@ -400,33 +435,44 @@ async function updateStatus(req, res) {
       startTime: rows[0].start_time,
     });
   }
+  if (details && status === 'completed') {
+    await notifyUser({
+      userId: details.owner_id,
+      type: 'booking_completed',
+      title: 'Уход завершён',
+      body: `${details.sitter_name} завершил(а) уход за ${details.pet_name}. Оцените ситтера или забронируйте снова.`,
+      meta: { booking_id: details.id, action: 'completed' },
+      emailSubject: 'Уход завершён',
+      emailText: `${details.sitter_name} завершил(а) уход за ${details.pet_name}. В Nanny можно оставить отзыв или забронировать снова.`,
+    }, { io });
+  }
   if (details && status === 'cancelled') {
     const updated = rows[0];
-    const reasonText = updated.cancel_comment ? `${updated.cancel_reason.replace(/_/g, ' ')}: ${updated.cancel_comment}` : updated.cancel_reason.replace(/_/g, ' ');
+    const reasonText = updated.cancel_comment ? `${cancelReasonRu(updated.cancel_reason)} («${updated.cancel_comment}»)` : cancelReasonRu(updated.cancel_reason);
     const refundText = updated.refund_percent != null
-      ? ` Refund: ${updated.refund_percent}% (${Number(updated.refund_amount).toLocaleString('en-US')} KZT).`
+      ? ` Возврат: ${updated.refund_percent}% (${money(updated.refund_amount)}).`
       : '';
     if (actor === 'sitter') {
       await notifyUser({
         userId: details.owner_id,
         type: 'booking_rejected',
-        title: 'Sitter cancelled booking',
-        body: `${details.sitter_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.${refundText}`,
+        title: 'Ситтер отменил бронирование',
+        body: `${details.sitter_name} отменил(а) бронирование для ${details.pet_name}. Причина: ${reasonText}.${refundText}`,
         meta: { booking_id: details.id },
-        emailSubject: 'Your booking was cancelled by the sitter',
-        emailText: `${details.sitter_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.${refundText} You can choose another sitter in Nanny.`,
-        smsText: `Nanny: ${details.sitter_name} cancelled booking for ${details.pet_name}.`,
+        emailSubject: 'Ситтер отменил бронирование',
+        emailText: `${details.sitter_name} отменил(а) бронирование для ${details.pet_name}. Причина: ${reasonText}.${refundText} В Nanny можно выбрать другого ситтера.`,
+        smsText: `Nanny: ${details.sitter_name} отменил(а) бронь для ${details.pet_name}.`,
       }, { io });
     } else {
       await notifyUser({
         userId: details.sitter_user_id,
         type: 'booking_cancelled',
-        title: 'Owner cancelled booking',
-        body: `${details.owner_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.`,
+        title: 'Владелец отменил бронирование',
+        body: `${details.owner_name} отменил(а) бронирование для ${details.pet_name}. Причина: ${reasonText}.`,
         meta: { booking_id: details.id },
-        emailSubject: 'A booking was cancelled',
-        emailText: `${details.owner_name} cancelled the booking for ${details.pet_name}. Reason: ${reasonText}.`,
-        smsText: `Nanny: ${details.owner_name} cancelled booking for ${details.pet_name}.`,
+        emailSubject: 'Бронирование отменено',
+        emailText: `${details.owner_name} отменил(а) бронирование для ${details.pet_name}. Причина: ${reasonText}.`,
+        smsText: `Nanny: ${details.owner_name} отменил(а) бронь для ${details.pet_name}.`,
       }, { io });
     }
     await clearBookingReminderJobs(details.id);
@@ -550,8 +596,8 @@ async function pay(req, res) {
   await notifyUser({
     userId: booking.sitter_user_id,
     type: 'booking_paid',
-    title: 'Booking paid',
-    body: `${booking.pet_name}'s booking was paid by the owner.`,
+    title: 'Бронирование оплачено',
+    body: `Владелец оплатил бронирование для ${booking.pet_name} (${money(booking.total_price)}).`,
     meta: { booking_id: booking.id },
   }, { io: req.app.get('io') }).catch(() => {});
 
@@ -590,4 +636,4 @@ async function cancelPreview(req, res) {
   });
 }
 
-module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings, pay, cancelPreview };
+module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings, pay, cancelPreview, remindPendingRequests, todayInAppTimeZone, toDateString };

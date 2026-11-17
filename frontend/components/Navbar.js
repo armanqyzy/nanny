@@ -13,6 +13,7 @@ const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC
 function getNotificationHref(notification) {
   const meta = notification?.meta || {};
 
+  if (meta.action === 'completed' && meta.booking_id) return `/bookings?review=${meta.booking_id}`;
   if (meta.booking_id) return '/bookings';
   if (meta.order_id) return '/shop/orders';
   if (meta.review_id || notification?.type === 'review:new') return '/dashboard';
@@ -23,7 +24,8 @@ function getNotificationHref(notification) {
 }
 
 export default function Navbar() {
-  const { t } = useLanguage();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { t, language } = useLanguage();
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -84,8 +86,8 @@ export default function Navbar() {
     setNotifications((prev) => prev.map((item) => ({ ...item, is_read: true })));
   }
 
-  async function openNotification(notification) {
-    const href = getNotificationHref(notification);
+  async function openNotification(notification, hrefOverride) {
+    const href = hrefOverride || getNotificationHref(notification);
     if (!href) return;
 
     if (!notification.is_read) {
@@ -104,6 +106,30 @@ export default function Navbar() {
   }
 
   const unreadCount = notifications.filter((item) => !item.is_read).length;
+
+  // Close the phone menu after navigating.
+  useEffect(() => { setMenuOpen(false); }, [router.asPath]);
+
+  const menuLinks = [
+    ...(user?.role === 'admin' ? [
+      ['/admin', t('shell', 'admin', 'Admin')],
+      ['/calendar', t('shell', 'calendar', 'Calendar')],
+      ['/shop/orders', t('shell', 'shopOrders', 'Shop orders')],
+    ] : []),
+    ...(user && user.role !== 'admin' ? [
+      ['/dashboard', t('shell', 'overview', 'Overview')],
+      ...(user.role === 'owner' ? [['/pets', t('shell', 'pets', 'Pets')]] : []),
+      ['/bookings', t('shell', 'bookings', 'Bookings')],
+      ['/calendar', t('shell', 'calendar', 'Calendar')],
+      ...(user.role === 'sitter' ? [['/verification', t('shell', 'verification', 'Verification')]] : []),
+    ] : []),
+    ['/sitters', t('shell', 'sitters', 'Sitters')],
+    ['/map', t('shell', 'map', 'Map')],
+    ...(user ? [['/chat', t('shell', 'messages', 'Messages')]] : []),
+    ['/shop', t('shell', 'shop', 'Shop')],
+    ...(!user ? [['/safety', t('shell', 'safety', 'Safety')]] : []),
+    ['/support', t('shell', 'support', 'Support')],
+  ];
 
   return (
     <>
@@ -126,12 +152,12 @@ export default function Navbar() {
             </div>
 
             <div className="nav-actions ml-auto flex flex-wrap items-center justify-end gap-2 md:ml-0 md:justify-self-end">
-              {/* On phones the language switcher moves into the scrollable row below to keep the header one line. */}
+              {/* On phones the language switcher lives in the ☰ menu. */}
               <div className="hidden md:block"><LanguageSwitcher /></div>
               {!user ? (
                 <>
                   <Link href="/login"    className="btn-ghost">{t('shell', 'signIn', 'Sign in')}</Link>
-                  <Link href="/register" className="btn-secondary">{t('shell', 'register', 'Register')}</Link>
+                  <span className="hidden md:inline-flex"><Link href="/register" className="btn-secondary">{t('shell', 'register', 'Register')}</Link></span>
                 </>
               ) : (
                 <>
@@ -174,10 +200,12 @@ export default function Navbar() {
                             {notifications.slice(0, 12).map((notification) => {
                               const href = getNotificationHref(notification);
                               return (
-                                <button
+                                <div
                                   key={notification.id}
-                                  type="button"
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={() => openNotification(notification)}
+                                  onKeyDown={(event) => { if (event.key === 'Enter') openNotification(notification); }}
                                   className={`group block w-full rounded-[24px] border p-4 text-left text-sm transition ${
                                     notification.is_read
                                       ? 'border-nanny-orange/10 bg-white hover:border-nanny-orange/20 hover:bg-[#fffaf4]'
@@ -207,7 +235,25 @@ export default function Navbar() {
                                       </span>
                                     )}
                                   </div>
-                                </button>
+                                  {notification.meta?.action === 'completed' && notification.meta?.booking_id && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      <button
+                                        type="button"
+                                        className="btn-ghost px-3 py-1.5 text-xs"
+                                        onClick={(event) => { event.stopPropagation(); openNotification(notification, `/bookings?review=${notification.meta.booking_id}`); }}
+                                      >
+                                        ⭐ {language === 'ru' ? 'Оставить отзыв' : language === 'kz' ? 'Пікір қалдыру' : 'Leave a review'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary px-3 py-1.5 text-xs"
+                                        onClick={(event) => { event.stopPropagation(); openNotification(notification, `/bookings?rebook=${notification.meta.booking_id}`); }}
+                                      >
+                                        🔁 {language === 'ru' ? 'Повторить бронь' : language === 'kz' ? 'Қайта броньдау' : 'Book again'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
@@ -216,55 +262,56 @@ export default function Navbar() {
                     )}
                   </div>
                   {user.role === 'admin' ? (
-                    <Link href="/admin" className="btn-ghost">{t('shell', 'admin', 'Admin')}</Link>
+                    <span className="hidden md:inline-flex"><Link href="/admin" className="btn-ghost">{t('shell', 'admin', 'Admin')}</Link></span>
                   ) : (
-                    <Link href="/dashboard" className="btn-ghost">{t('shell', 'myAccount', 'My Account')}</Link>
+                    <span className="hidden md:inline-flex"><Link href="/dashboard" className="btn-ghost">{t('shell', 'myAccount', 'My Account')}</Link></span>
                   )}
-                  <button onClick={logout} className="btn-secondary">{t('shell', 'logout', 'Logout')}</button>
+                  <span className="hidden md:inline-flex"><button onClick={logout} className="btn-secondary">{t('shell', 'logout', 'Logout')}</button></span>
                 </>
               )}
+              <span className="md:hidden"><button
+                type="button"
+                className="btn-ghost px-3 text-lg leading-none"
+                aria-label={language === 'ru' ? 'Меню' : language === 'kz' ? 'Мәзір' : 'Menu'}
+                aria-expanded={menuOpen}
+                onClick={() => { setMenuOpen((prev) => !prev); setOpen(false); }}
+              >
+                {menuOpen ? '✕' : '☰'}
+              </button></span>
             </div>
           </div>
 
-          {/* Phones: the desktop links and the sidebar are hidden, so show a scrollable link row instead. */}
-          <div className="-mx-6 mt-3 flex items-center gap-2 overflow-x-auto px-6 pb-1 text-sm font-medium md:hidden">
-            <div className="shrink-0"><LanguageSwitcher /></div>
-            {[
-              ...(user?.role === 'admin' ? [
-                ['/admin', t('shell', 'admin', 'Admin')],
-                ['/calendar', t('shell', 'calendar', 'Calendar')],
-                ['/shop/orders', t('shell', 'shopOrders', 'Shop orders')],
-              ] : []),
-              ...(user && user.role !== 'admin' ? [
-                ['/dashboard', t('shell', 'overview', 'Overview')],
-                ...(user.role === 'owner' ? [['/pets', t('shell', 'pets', 'Pets')]] : []),
-                ['/bookings', t('shell', 'bookings', 'Bookings')],
-                ['/calendar', t('shell', 'calendar', 'Calendar')],
-                ...(user.role === 'sitter' ? [['/verification', t('shell', 'verification', 'Verification')]] : []),
-              ] : []),
-              ['/sitters', t('shell', 'sitters', 'Sitters')],
-              ['/map', t('shell', 'map', 'Map')],
-              ...(user ? [['/chat', t('shell', 'messages', 'Messages')]] : []),
-              ['/shop', t('shell', 'shop', 'Shop')],
-              ...(!user ? [['/safety', t('shell', 'safety', 'Safety')]] : []),
-              ['/support', t('shell', 'support', 'Support')],
-            ].map(([href, label]) => {
-              const isActive = router.asPath === href || router.asPath.startsWith(`${href}/`) || router.asPath.startsWith(`${href}?`);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`shrink-0 rounded-full border px-4 py-2 whitespace-nowrap ${
-                    isActive
-                      ? 'border-nanny-orange bg-nanny-orange text-white'
-                      : 'border-nanny-orange/20 bg-white text-nanny-brownish'
-                  }`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </div>
+          {/* Phones: one header line; links, language and account actions live in the ☰ menu. */}
+          {menuOpen && (
+            <div className="mt-4 space-y-4 border-t border-nanny-orange/15 pt-4 md:hidden">
+              <div className="grid grid-cols-2 gap-2 text-sm font-medium">
+                {menuLinks.map(([href, label]) => {
+                  const isActive = router.asPath === href || router.asPath.startsWith(`${href}/`) || router.asPath.startsWith(`${href}?`);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`rounded-2xl border px-4 py-3 ${
+                        isActive
+                          ? 'border-nanny-orange bg-nanny-orange text-white'
+                          : 'border-nanny-orange/20 bg-white text-nanny-brownish'
+                      }`}
+                    >
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <LanguageSwitcher />
+                {!user ? (
+                  <Link href="/register" className="btn-secondary">{t('shell', 'register', 'Register')}</Link>
+                ) : (
+                  <button onClick={logout} className="btn-secondary">{t('shell', 'logout', 'Logout')}</button>
+                )}
+              </div>
+            </div>
+          )}
         </nav>
       </header>
     </>

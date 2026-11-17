@@ -63,12 +63,12 @@ async function send(req, res) {
   await notifyUser({
     userId: receiver_id,
     type: 'new_message',
-    title: 'New message',
-    body: `New message from ${senderRows[0]?.full_name || 'Nanny user'}.`,
+    title: 'Новое сообщение',
+    body: `${senderRows[0]?.full_name || 'Пользователь Nanny'} написал(а) вам сообщение.`,
     meta: { message_id: message.id, sender_id: req.user.id },
-    emailSubject: 'You have a new message on Nanny',
-    emailText: `New message from ${senderRows[0]?.full_name || 'Nanny user'}: ${message.preview || 'Open the app to view it.'}`,
-    smsText: `Nanny: new message from ${senderRows[0]?.full_name || 'someone'}.`,
+    emailSubject: 'Новое сообщение в Nanny',
+    emailText: `${senderRows[0]?.full_name || 'Пользователь Nanny'}: ${message.preview || 'откройте Nanny, чтобы прочитать.'}`,
+    smsText: `Nanny: новое сообщение от ${senderRows[0]?.full_name || 'пользователя'}.`,
   }, { io });
 
   res.status(201).json(message);

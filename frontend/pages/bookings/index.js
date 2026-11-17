@@ -56,6 +56,12 @@ const STATUS_LABELS = {
   cancelled: 'Cancelled',
 };
 
+// Calendar day of a booking date in Almaty, whatever shape the API sends.
+function dayOf(value) {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return new Date(value).toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' });
+}
+
 const STATUS_NAMES = {
   ru: { pending: 'Ожидает', confirmed: 'Подтверждено', completed: 'Завершено', cancelled: 'Отменено' },
   kz: { pending: 'Күтуде', confirmed: 'Расталды', completed: 'Аяқталды', cancelled: 'Бас тартылды' },
@@ -87,6 +93,9 @@ export default function Bookings() {
   const [rebookMessage, setRebookMessage] = useState('');
   const [statusError, setStatusError] = useState('');
   const [busyBookingId, setBusyBookingId] = useState(null);
+  // Phones show bookings as short cards; a tap opens the details and actions.
+  const [expandedIds, setExpandedIds] = useState({});
+  const toggleExpanded = (id) => setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   const [payBooking, setPayBooking] = useState(null);
   const [payForm, setPayForm] = useState(EMPTY_PAYMENT);
   const [payError, setPayError] = useState('');
@@ -199,13 +208,35 @@ export default function Bookings() {
     const bookingToReview = data.asOwner.find((item) => (
       Number(item.id) === Number(reviewFromQuery) &&
       item.status === 'completed' &&
-      !item.has_review
+      !item.has_review &&
+      dayOf(item.end_date) <= todayInAppTimeZone()
     ));
     if (bookingToReview) {
       setReviewBooking(bookingToReview);
       setReviewMessage('');
     }
   }, [reviewFromQuery, data.asOwner]);
+
+  // Links from notifications (/bookings?rebook=12) open the "Book again" window right away.
+  const rebookFromQuery = router.query.rebook;
+  useEffect(() => {
+    if (!rebookFromQuery || !data.asOwner.length) return;
+    const original = data.asOwner.find((item) => Number(item.id) === Number(rebookFromQuery));
+    if (!original) return;
+    openRebook(original);
+    router.replace({ pathname: '/bookings' }, undefined, { shallow: true });
+  }, [rebookFromQuery, data.asOwner]);
+
+  function openRebook(b) {
+    setRebookBooking(b);
+    setRebookForm({
+      start_date: '',
+      end_date: '',
+      start_time: b.start_time ? String(b.start_time).slice(0, 5) : '',
+      end_time: b.end_time ? String(b.end_time).slice(0, 5) : '',
+    });
+    setRebookMessage('');
+  }
 
   async function reload() { setData(await api.get('/api/bookings/mine')); }
 
@@ -308,17 +339,44 @@ export default function Bookings() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-nanny-brownish/45">{contactLabel}</p>
-              <div className="mt-2 text-[30px] font-bold leading-none text-nanny-brownish">{contactName}</div>
+              <div className="mt-2 text-xl font-bold leading-tight text-nanny-brownish md:text-[30px] md:leading-none">{contactName}</div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-nanny-brownish/70">
                 <span className="rounded-full bg-nanny-cream px-3 py-1 capitalize">{serviceLabel}</span>
                 <span className="opacity-40">•</span>
                 <span>{t.pet || 'Pet'}: {b.pet_name}</span>
               </div>
             </div>
-            <span className={`badge px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] ${STATUS_STYLES[b.status]}`}>{(STATUS_NAMES[language] || STATUS_NAMES.en)[b.status] || b.status}</span>
+            <span className={`badge shrink-0 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] ${STATUS_STYLES[b.status]}`}>{(STATUS_NAMES[language] || STATUS_NAMES.en)[b.status] || b.status}</span>
+          </div>
+          <div className="mt-3 md:hidden">
+            <p className="text-sm font-semibold text-nanny-brownish">
+              {formatDateRange(b.start_date, b.end_date, language)}
+              {b.start_time ? ` · ${String(b.start_time).slice(0, 5)}` : ''}
+              {' · '}{Number(b.total_price).toLocaleString()} ₸
+            </p>
+            {role === 'sitter' && b.status === 'pending' && (
+              <p className="mt-2 inline-flex rounded-full bg-[#fff1cf] px-3 py-1 text-xs font-semibold text-[#8d5c0b]">
+                {language === 'ru' ? 'Ждёт вашего ответа' : language === 'kz' ? 'Жауабыңызды күтуде' : 'Waiting for your answer'}
+              </p>
+            )}
+            {role === 'owner' && b.status === 'confirmed' && (!b.payment_status || b.payment_status === 'unpaid') && (
+              <p className="mt-2 inline-flex rounded-full bg-nanny-blue/10 px-3 py-1 text-xs font-semibold text-nanny-blue">
+                {language === 'ru' ? 'Можно оплатить' : language === 'kz' ? 'Төлеуге болады' : 'Ready to pay'}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => toggleExpanded(b.id)}
+              aria-expanded={Boolean(expandedIds[b.id])}
+              className="mt-3 flex w-full items-center justify-center gap-1 rounded-2xl border border-nanny-orange/20 bg-white py-2 text-sm font-semibold text-nanny-blue"
+            >
+              {expandedIds[b.id]
+                ? (language === 'ru' ? 'Свернуть ▴' : language === 'kz' ? 'Жасыру ▴' : 'Hide ▴')
+                : (language === 'ru' ? 'Подробнее и действия ▾' : language === 'kz' ? 'Толығырақ ▾' : 'Details and actions ▾')}
+            </button>
           </div>
         </div>
-        <div className="px-6 py-5">
+        <div className={`px-6 py-5 ${expandedIds[b.id] ? '' : 'hidden md:block'}`}>
           <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-nanny-orange/10 bg-[#fffaf3] p-4">
               <div className="flex items-center gap-2 text-nanny-deepOrange">
@@ -445,6 +503,11 @@ export default function Bookings() {
             <div className="mt-5 flex flex-wrap gap-2 border-t border-nanny-orange/10 pt-4">
               {b.has_review ? (
                 <span className="badge border border-[#bde8cb] bg-[#e7f8ec] px-3 py-1.5 text-green-700">{t.reviewSent || 'Review sent'}</span>
+              ) : dayOf(b.end_date) > todayInAppTimeZone() ? (
+                <span className="badge bg-nanny-cream px-3 py-1.5 text-nanny-brownish">
+                  {language === 'ru' ? 'Отзыв можно оставить после ' : language === 'kz' ? 'Пікірді мына күннен кейін қалдыруға болады: ' : 'You can review after '}
+                  {new Date(b.end_date).toLocaleDateString(localeFor(language), { day: 'numeric', month: 'long' })}
+                </span>
               ) : (
                 <button
                   type="button"
@@ -459,16 +522,7 @@ export default function Bookings() {
               )}
               <button
                 type="button"
-                onClick={() => {
-                  setRebookBooking(b);
-                  setRebookForm({
-                    start_date: '',
-                    end_date: '',
-                    start_time: b.start_time ? String(b.start_time).slice(0,5) : '',
-                    end_time: b.end_time ? String(b.end_time).slice(0,5) : '',
-                  });
-                  setRebookMessage('');
-                }}
+                onClick={() => openRebook(b)}
                 className="btn-ghost text-sm"
               >
                 <span className="inline-flex items-center gap-2">

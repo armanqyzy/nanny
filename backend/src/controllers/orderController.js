@@ -100,12 +100,12 @@ async function checkout(req, res) {
     await notifyUser({
       userId: req.user.id,
       type: 'shop_order_created',
-      title: 'Shop order paid',
-      body: `Your shop order #${order.id} was paid successfully.`,
+      title: 'Заказ оплачен',
+      body: `Заказ №${order.id} в магазине успешно оплачен. Статус можно отслеживать в разделе «Мои заказы».`,
       meta: { order_id: order.id, payment_status: order.payment_status },
-      emailSubject: `Shop order #${order.id} paid successfully`,
-      emailText: `Your shop order #${order.id} was paid successfully. Open Nanny to track status updates.`,
-      smsText: `Nanny: shop order #${order.id} paid successfully.`,
+      emailSubject: `Заказ №${order.id} оплачен`,
+      emailText: `Заказ №${order.id} в магазине Nanny успешно оплачен. Статус можно отслеживать на сайте.`,
+      smsText: `Nanny: заказ №${order.id} оплачен.`,
     }, { io: req.app.get('io') });
 
     const detailedItems = priced.map((item) => {

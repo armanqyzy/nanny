@@ -132,6 +132,11 @@ ensureSchema().finally(() => {
   server.listen(PORT, () => {
     console.log(`Nanny API listening on http://localhost:${PORT}`);
     require('./services/telegramService').setupTelegramWebhook();
+    // Unanswered requests starting today or tomorrow: remind the sitter once.
+    const { remindPendingRequests } = require('./controllers/bookingController');
+    const runReminders = () => remindPendingRequests(io).catch((err) => console.error('[reminder]', err.message));
+    setTimeout(runReminders, 20 * 1000);
+    setInterval(runReminders, 15 * 60 * 1000);
   });
 });
 

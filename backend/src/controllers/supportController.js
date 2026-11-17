@@ -61,8 +61,8 @@ async function createTicket(req, res) {
     await notifyUser({
       userId: assignedAdminId,
       type: 'support_ticket',
-      title: 'New support ticket',
-      body: `${req.user.full_name || 'User'} created "${subject.trim()}".`,
+      title: 'Новое обращение в поддержку',
+      body: `${(await db.query('SELECT full_name FROM users WHERE id = $1', [req.user.id])).rows[0]?.full_name || 'Пользователь'}: «${subject.trim()}».`,
       meta: { ticket_id: rows[0].id, category },
     });
   }

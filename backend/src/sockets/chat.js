@@ -75,8 +75,8 @@ function registerChat(io) {
         await createNotification({
           userId: receiver_id,
           type: 'new_message',
-          title: 'New message',
-          body: `New message from ${senderRows[0]?.full_name || 'Nanny user'}.`,
+          title: 'Новое сообщение',
+          body: `${senderRows[0]?.full_name || 'Пользователь Nanny'} написал(а) вам сообщение.`,
           meta: { message_id: message.id, sender_id: uid },
         }, { io });
         ack?.({ ok: true, message });

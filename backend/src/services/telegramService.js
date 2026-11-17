@@ -38,9 +38,29 @@ async function getBotUsername() {
   return cachedUsername;
 }
 
-async function sendTelegramMessage(chatId, text) {
+// buttons: [{ text, url }] shown under the message (Telegram only accepts http/https links there).
+function keyboard(buttons) {
+  const valid = (buttons || []).filter((b) => /^https?:\/\//.test(b.url || '') && !/localhost|127\.0\.0\.1/.test(b.url));
+  return valid.length ? { reply_markup: { inline_keyboard: [valid.map((b) => ({ text: b.text, url: b.url }))] } } : {};
+}
+
+async function sendTelegramMessage(chatId, text, buttons) {
   if (!isTelegramEnabled() || !chatId) return { skipped: true };
-  return callTelegram('sendMessage', { chat_id: chatId, text: String(text).slice(0, 4000), disable_web_page_preview: true });
+  return callTelegram('sendMessage', {
+    chat_id: chatId, text: String(text).slice(0, 4000), disable_web_page_preview: true, ...keyboard(buttons),
+  });
+}
+
+// Sends a picture by its public link (Cloudinary). Falls back to text if Telegram cannot fetch it.
+async function sendTelegramPhoto(chatId, photoUrl, caption, buttons) {
+  if (!isTelegramEnabled() || !chatId) return { skipped: true };
+  try {
+    return await callTelegram('sendPhoto', {
+      chat_id: chatId, photo: photoUrl, caption: String(caption || '').slice(0, 1000), ...keyboard(buttons),
+    });
+  } catch (err) {
+    return sendTelegramMessage(chatId, caption, buttons);
+  }
 }
 
 async function setupTelegramWebhook() {
@@ -127,6 +147,7 @@ module.exports = {
   webhookSecret,
   getBotUsername,
   sendTelegramMessage,
+  sendTelegramPhoto,
   setupTelegramWebhook,
   createLinkUrl,
   handleUpdate,
