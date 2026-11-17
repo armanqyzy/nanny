@@ -8,6 +8,8 @@ import { formatRating } from '../lib/rating';
 import { petSummaryLine } from '../lib/pets';
 import SitterAvailabilityPanel from '../components/SitterAvailabilityPanel';
 import IncomeChart from '../components/IncomeChart';
+import EmptyState from '../components/EmptyState';
+import OnboardingGuide from '../components/OnboardingGuide';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -50,6 +52,14 @@ export default function Dashboard() {
   const [recommendationPet, setRecommendationPet] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [verification, setVerification] = useState(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  // Show the guide automatically once per account (first dashboard visit).
+  useEffect(() => {
+    if (!user?.id || user.role === 'admin') return;
+    let seen = null;
+    try { seen = localStorage.getItem(`nanny_onboarding_seen_${user.id}`); } catch { seen = '1'; }
+    if (!seen) setGuideOpen(true);
+  }, [user?.id, user?.role]);
   const [sitterDashboard, setSitterDashboard] = useState(null);
   const [sitterForm, setSitterForm] = useState({
     description: '',
@@ -619,8 +629,68 @@ export default function Dashboard() {
     return acc;
   }, []).slice(0, 3);
 
+  const isSitterUser = user?.role === 'sitter';
+  const onboardingSteps = isSitterUser
+    ? [
+        {
+          title: tr(language, 'Fill in your sitter profile', 'Заполните профиль ситтера', 'Ситтер профилін толтырыңыз'),
+          text: tr(language, 'Description, district and working hours.', 'Описание, район и часы работы.', 'Сипаттама, аудан және жұмыс уақыты.'),
+          done: Boolean(sitterDashboard?.sitter?.description && sitterDashboard?.sitter?.district),
+          href: '/dashboard',
+        },
+        {
+          title: tr(language, 'Set prices for your services', 'Укажите цены на услуги', 'Қызмет бағаларын көрсетіңіз'),
+          text: tr(language, 'Owners see them before booking.', 'Владельцы видят их до бронирования.', 'Иелер оларды брондау алдында көреді.'),
+          done: Boolean(sitterDashboard?.sitter?.services?.length),
+          href: '/dashboard',
+        },
+        {
+          title: tr(language, 'Get verified', 'Пройдите проверку', 'Тексеруден өтіңіз'),
+          text: tr(language, 'Upload a document to get the trust badge.', 'Загрузите документ, чтобы получить бейдж доверия.', 'Сенім белгісін алу үшін құжат жүктеңіз.'),
+          done: Boolean(sitterDashboard?.sitter?.is_verified),
+          href: '/verification',
+        },
+      ]
+    : [
+        {
+          title: tr(language, 'Add your pet', 'Добавьте питомца', 'Жануарыңызды қосыңыз'),
+          text: tr(language, 'Photo, age and care notes help sitters prepare.', 'Фото, возраст и заметки помогут ситтеру подготовиться.', 'Фото, жас және ескертпелер ситтерге көмектеседі.'),
+          done: pets.length > 0,
+          href: '/pets',
+        },
+        {
+          title: tr(language, 'Find a sitter', 'Найдите ситтера', 'Ситтер табыңыз'),
+          text: tr(language, 'Compare ratings, prices and distance on the map.', 'Сравните рейтинг, цены и расстояние на карте.', 'Картадан рейтинг, баға және қашықтықты салыстырыңыз.'),
+          done: favorites.length > 0 || book.asOwner.length > 0,
+          href: '/map',
+        },
+        {
+          title: tr(language, 'Book and follow updates', 'Забронируйте и следите за обновлениями', 'Брондап, жаңартуларды бақылаңыз'),
+          text: tr(language, 'Chat with the sitter and get photo updates.', 'Переписывайтесь с ситтером и получайте фото-отчёты.', 'Ситтермен сөйлесіп, фото-есептер алыңыз.'),
+          done: book.asOwner.length > 0,
+          href: '/sitters',
+        },
+      ];
+
   return (
     <DashboardLayout title={t.pageTitle || 'My profile'}>
+      {guideOpen && user.role !== 'admin' && (
+        <OnboardingGuide
+          language={language}
+          steps={onboardingSteps}
+          onClose={() => {
+            setGuideOpen(false);
+            try { localStorage.setItem(`nanny_onboarding_seen_${user.id}`, '1'); } catch { /* ignore */ }
+          }}
+        />
+      )}
+      {user.role !== 'admin' && (
+        <div className="mb-4 flex justify-end">
+          <button type="button" className="btn-ghost text-sm" onClick={() => setGuideOpen(true)}>
+            {tr(language, 'How Nanny works', 'Как пользоваться Nanny', 'Nanny қалай жұмыс істейді')}
+          </button>
+        </div>
+      )}
       {user.role === 'owner' && (welcomeMode || pets.length === 0 || book.asOwner.length === 0) && (
         <section className="mb-8 rounded-[32px] border border-nanny-orange/15 bg-gradient-to-br from-white to-[#fff6ea] p-6 shadow-card">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -1133,7 +1203,15 @@ export default function Dashboard() {
               </div>
             </div>
           ))}
-          {pets.length === 0 && <p className="text-sm opacity-60">{t.noPets || 'No pets yet.'}</p>}
+          {pets.length === 0 && (
+            <EmptyState
+              compact
+              title={t.noPets || 'No pets yet.'}
+              text={(language === 'ru' ? 'Добавьте питомца, чтобы ситтеры знали, о ком будут заботиться.' : language === 'kz' ? 'Ситтерлер кімге күтім жасайтынын білуі үшін жануарыңызды қосыңыз.' : 'Add your pet so sitters know who they will care for.')}
+              actionLabel={(language === 'ru' ? 'Добавить питомца' : language === 'kz' ? 'Жануар қосу' : 'Add a pet')}
+              actionHref="/pets"
+            />
+          )}
         </div>
       </section>
       )}

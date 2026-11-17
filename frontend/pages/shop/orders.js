@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/DashboardLayout';
 import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
+import EmptyState from '../../components/EmptyState';
 import {
   SHOP_ORDER_STATUSES,
   SHOP_ORDER_STATUS_META,
@@ -391,12 +392,12 @@ export default function Orders() {
       </section>
 
       {orders.length === 0 && (
-        <div className="card">
-          <p className="font-semibold text-nanny-deepOrange">{isAdmin ? t.noPlatformOrders : t.noOrdersYet}</p>
-          <p className="mt-1 text-sm opacity-70">
-            {isAdmin ? t.noPlatformOrdersText : t.noOrdersText}
-          </p>
-        </div>
+        <EmptyState
+          title={isAdmin ? t.noPlatformOrders : t.noOrdersYet}
+          text={isAdmin ? t.noPlatformOrdersText : t.noOrdersText}
+          actionLabel={isAdmin ? null : (language === 'ru' ? 'Перейти в магазин' : language === 'kz' ? 'Дүкенге өту' : 'Go to the shop')}
+          actionHref={isAdmin ? null : '/shop'}
+        />
       )}
 
       <div className="space-y-4">

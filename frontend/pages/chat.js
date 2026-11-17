@@ -11,6 +11,7 @@ import { api, currentUser } from '../lib/api';
 import { avatarFallback, resolveAvatar } from '../lib/avatars';
 import { useLanguage } from '../lib/i18n';
 import ReportModal from '../components/ReportModal';
+import EmptyState from '../components/EmptyState';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 
@@ -577,7 +578,16 @@ export default function Chat() {
               </button>
             )}
 
-            {filteredThreads.length === 0 && <p className="p-4 text-sm opacity-60">{t.noConversations || 'No conversations match your search.'}</p>}
+            {filteredThreads.length === 0 && threadSearch.trim() && <p className="p-4 text-sm opacity-60">{t.noConversations || 'No conversations match your search.'}</p>}
+            {filteredThreads.length === 0 && !threadSearch.trim() && (
+              <EmptyState
+                compact
+                title={(language === 'ru' ? 'Диалогов пока нет' : language === 'kz' ? 'Диалогтар әлі жоқ' : 'No conversations yet')}
+                text={(language === 'ru' ? 'Откройте профиль ситтера и нажмите «Написать», чтобы начать диалог.' : language === 'kz' ? 'Чатты бастау үшін ситтер профилін ашып, «Жазу» батырмасын басыңыз.' : 'Open a sitter profile and press "Message" to start a chat.')}
+                actionLabel={me?.role === 'owner' ? (language === 'ru' ? 'Найти ситтера' : language === 'kz' ? 'Ситтер табу' : 'Find a sitter') : null}
+                actionHref={me?.role === 'owner' ? '/sitters' : null}
+              />
+            )}
             <div className="space-y-2">
               {filteredThreads
                 .filter((thread) => !pinnedSupportThread || thread.id !== pinnedSupportThread.id)

@@ -7,6 +7,7 @@ import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 import ReportModal from '../../components/ReportModal';
+import EmptyState from '../../components/EmptyState';
 
 const EMPTY_PAYMENT = { card_holder: '', card_number: '', expiry: '', cvc: '' };
 
@@ -493,7 +494,12 @@ export default function Bookings() {
       </div>
       <div className="grid xl:grid-cols-2 gap-5">
         {data.asOwner.filter((b) => filter === 'all' || b.status === filter).length ? data.asOwner.filter((b) => filter === 'all' || b.status === filter).map((b) => <Card key={b.id} b={b} role="owner" />)
-          : <div className="rounded-[28px] border border-dashed border-nanny-orange/20 bg-white/70 p-6 text-sm leading-6 text-nanny-brownish/70">{t.noBookings || 'No bookings yet. Start by choosing a sitter and creating your first request.'}</div>}
+          : <div className="xl:col-span-2"><EmptyState
+              title={(language === 'ru' ? 'Бронирований пока нет' : language === 'kz' ? 'Брондаулар әлі жоқ' : 'No bookings yet')}
+              text={t.noBookings || 'No bookings yet. Start by choosing a sitter and creating your first request.'}
+              actionLabel={(language === 'ru' ? 'Найти ситтера' : language === 'kz' ? 'Ситтер табу' : 'Find a sitter')}
+              actionHref="/sitters"
+            /></div>}
       </div>
 
       {data.asSitter.filter((b) => filter === 'all' || b.status === filter).length > 0 && (

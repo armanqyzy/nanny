@@ -9,6 +9,7 @@ import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { buildSitterRouteQuery, parseMapStateFromQuery } from '../../lib/sitterMapState';
 import { formatRating } from '../../lib/rating';
+import EmptyState from '../../components/EmptyState';
 
 const INITIAL_FILTERS = {
   city: '',
@@ -412,7 +413,14 @@ export default function SittersList() {
               </Link>
             ))}
             {sitters.length === 0 && (
-              <p className="col-span-full text-center opacity-70">{copy.noResults}</p>
+              <div className="col-span-full">
+                <EmptyState
+                  title={copy.noResults}
+                  text={(language === 'ru' ? 'Попробуйте убрать часть фильтров или поищите на карте с расстоянием «Везде».' : language === 'kz' ? 'Кейбір сүзгілерді алып тастаңыз немесе картадан «Барлық жерде» арқылы іздеңіз.' : 'Try removing some filters, or search on the map with "Anywhere" distance.')}
+                  actionLabel={(language === 'ru' ? 'Открыть карту' : language === 'kz' ? 'Картаны ашу' : 'Open the map')}
+                  actionHref="/map"
+                />
+              </div>
             )}
           </div>
         )}
