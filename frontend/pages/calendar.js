@@ -126,16 +126,16 @@ export default function Calendar() {
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.15fr)_380px]">
         <section className="min-w-0 overflow-hidden rounded-[32px] border border-nanny-orange/10 bg-white shadow-card">
-          <div className="flex items-center justify-between gap-3 border-b border-nanny-orange/10 bg-gradient-to-r from-white to-[#fff8ef] px-6 py-5">
+          <div className="flex items-center justify-between gap-3 border-b border-nanny-orange/10 bg-gradient-to-r from-white to-[#fff8ef] px-3 py-5 sm:px-6">
             <button className="btn-ghost" onClick={() => setMonth(new Date(y, m - 1, 1))}>
               <span className="inline-flex items-center gap-2">
-                <Icon name="calendar" className="h-4 w-4" />
+                <Icon name="calendar" className="hidden h-4 w-4 sm:inline" />
                 {t.previous || 'Previous'}
               </span>
             </button>
             <div className="text-center">
               <p className="text-xs uppercase tracking-[0.18em] text-nanny-brownish/45">{t.monthView || 'Month view'}</p>
-              <h2 className="mt-1 text-2xl font-bold text-nanny-brownish">
+              <h2 className="mt-1 text-lg font-bold text-nanny-brownish sm:text-2xl">
                 {monthLabel}
               </h2>
             </div>

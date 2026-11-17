@@ -647,7 +647,7 @@ export default function Dashboard() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-nanny-deepOrange/55">
-                  {t.ownerJourney || 'Owner journey'}
+                  {language === 'ru' ? 'Мой аккаунт' : language === 'kz' ? 'Менің аккаунтым' : 'My account'}
                 </p>
                 <h2 className="mt-3 text-3xl font-bold leading-tight text-nanny-blue">
                   {user.full_name}

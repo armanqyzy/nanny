@@ -25,7 +25,8 @@ async function recommendations(req, res) {
     : await db.query('SELECT * FROM pets WHERE owner_id=$1 ORDER BY created_at DESC LIMIT 1', [req.user.id]);
 
   const pet = petQuery.rows[0];
-  if (!pet) return res.status(404).json({ error: 'Pet not found for recommendations' });
+  // No pet yet is a normal state for new owners, not an error.
+  if (!pet) return res.json({ pet: null, recommendations: [] });
 
   const { rows } = await db.query(
     `SELECT s.id, s.user_id, u.full_name, u.avatar_url,

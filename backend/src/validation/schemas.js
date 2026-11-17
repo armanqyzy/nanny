@@ -20,11 +20,15 @@ const phoneSchema = z
   .max(40)
   .regex(/^[+0-9()\-\s]+$/, 'Phone contains invalid characters');
 
-const optionalTime = z
-  .string()
-  .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Time must be in HH:MM format')
-  .optional()
-  .nullable();
+// Empty strings from the form mean "no time", so turn them into null before validating.
+const optionalTime = z.preprocess(
+  (value) => (value === '' ? null : value),
+  z
+    .string()
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Time must be in HH:MM format')
+    .optional()
+    .nullable()
+);
 
 const authSchemas = {
   register: z.object({

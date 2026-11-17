@@ -159,7 +159,14 @@ export default function SitterPage() {
 
     setFieldErrors({});
     try {
-      await api.post('/api/bookings', { sitter_id: Number(id), ...book, pet_id: Number(book.pet_id) });
+      await api.post('/api/bookings', {
+        sitter_id: Number(id),
+        ...book,
+        pet_id: Number(book.pet_id),
+        start_time: book.start_time || null,
+        end_time: book.end_time || null,
+        notes: book.notes || null,
+      });
       // Reset the form so the same booking is not submitted twice by accident.
       setBook({ ...EMPTY_BOOKING, service: sitter?.services?.[0]?.service || EMPTY_BOOKING.service });
       setAvailability(null);

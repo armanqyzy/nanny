@@ -122,7 +122,6 @@ export default function Pets() {
     if (form.pet_type === 'other' && !form.custom_pet_type.trim()) nextErrors.pet_type = 'Tell us what type of pet you have.';
     if (form.age === '') nextErrors.age = 'Add your pet age.';
     if (form.age !== '' && (Number(form.age) < 0 || Number(form.age) > 100)) nextErrors.age = 'Age should be between 0 and 100.';
-    if (!form.photo_url) nextErrors.photo_url = 'Upload a pet photo from your media library.';
 
     if (Object.keys(nextErrors).length) {
       setFieldErrors(nextErrors);

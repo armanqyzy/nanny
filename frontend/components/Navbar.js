@@ -143,7 +143,7 @@ export default function Navbar() {
                       )}
                     </button>
                     {open && (
-                      <div className="absolute right-0 mt-3 w-[360px] overflow-hidden rounded-[28px] border border-nanny-orange/15 bg-white shadow-[0_24px_70px_rgba(122,75,31,0.18)] backdrop-blur">
+                      <div className="absolute right-0 mt-3 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-[28px] border border-nanny-orange/15 bg-white shadow-[0_24px_70px_rgba(122,75,31,0.18)] backdrop-blur">
                         <div className="border-b border-nanny-orange/10 bg-[linear-gradient(135deg,rgba(255,247,234,0.98),rgba(255,255,255,0.98))] px-5 py-4">
                           <div className="flex items-center justify-between gap-3">
                             <div>
@@ -221,6 +221,39 @@ export default function Navbar() {
                 </>
               )}
             </div>
+          </div>
+
+          {/* Phones: the desktop links and the sidebar are hidden, so show a scrollable link row instead. */}
+          <div className="-mx-6 mt-3 flex gap-2 overflow-x-auto px-6 pb-1 text-sm font-medium md:hidden">
+            {[
+              ...(user ? [
+                ['/dashboard', t('shell', 'overview', 'Overview')],
+                ['/pets', t('shell', 'pets', 'Pets')],
+                ['/bookings', t('shell', 'bookings', 'Bookings')],
+                ['/calendar', t('shell', 'calendar', 'Calendar')],
+              ] : []),
+              ['/sitters', t('shell', 'sitters', 'Sitters')],
+              ['/map', t('shell', 'map', 'Map')],
+              ['/chat', t('shell', 'messages', 'Messages')],
+              ['/shop', t('shell', 'shop', 'Shop')],
+              ['/safety', t('shell', 'safety', 'Safety')],
+              ['/support', t('shell', 'support', 'Support')],
+            ].map(([href, label]) => {
+              const isActive = router.asPath === href || router.asPath.startsWith(`${href}/`) || router.asPath.startsWith(`${href}?`);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`shrink-0 rounded-full border px-4 py-2 whitespace-nowrap ${
+                    isActive
+                      ? 'border-nanny-orange bg-nanny-orange text-white'
+                      : 'border-nanny-orange/20 bg-white text-nanny-brownish'
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
           </div>
         </nav>
       </header>
