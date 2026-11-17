@@ -128,7 +128,10 @@ server.on('error', (error) => {
 
 const { ensureSchema } = require('./config/ensureSchema');
 
-ensureSchema().finally(() => {
+// SEED_DEMO=true (Render > Environment) fills the site with demo accounts once; later starts skip it.
+ensureSchema()
+  .then(() => (process.env.SEED_DEMO === 'true' ? require('./config/seedDemo').seedDemo().catch(() => {}) : null))
+  .finally(() => {
   server.listen(PORT, () => {
     console.log(`Nanny API listening on http://localhost:${PORT}`);
     require('./services/telegramService').setupTelegramWebhook();
