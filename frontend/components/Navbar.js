@@ -6,6 +6,7 @@ import { io } from 'socket.io-client';
 import Icon from './Icon';
 import BrandLogo from './BrandLogo';
 import LanguageSwitcher from './LanguageSwitcher';
+import HeaderSearch from './HeaderSearch';
 import { useLanguage } from '../lib/i18n';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -153,6 +154,7 @@ export default function Navbar() {
 
             <div className="nav-actions ml-auto flex flex-wrap items-center justify-end gap-2 md:ml-0 md:justify-self-end">
               {/* On phones the language switcher lives in the ☰ menu. */}
+              <div className="hidden md:block"><HeaderSearch language={language} /></div>
               <div className="hidden md:block"><LanguageSwitcher /></div>
               {!user ? (
                 <>
@@ -284,6 +286,7 @@ export default function Navbar() {
           {/* Phones: one header line; links, language and account actions live in the ☰ menu. */}
           {menuOpen && (
             <div className="mt-4 space-y-4 border-t border-nanny-orange/15 pt-4 md:hidden">
+              <HeaderSearch language={language} variant="inline" />
               <div className="grid grid-cols-2 gap-2 text-sm font-medium">
                 {menuLinks.map(([href, label]) => {
                   const isActive = router.asPath === href || router.asPath.startsWith(`${href}/`) || router.asPath.startsWith(`${href}?`);

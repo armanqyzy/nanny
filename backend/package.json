@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "test": "node --test tests/booking-flow.test.js",
     "dev": "nodemon --legacy-watch src/server.js",
     "db:init": "psql $DATABASE_URL -f db/schema.sql && psql $DATABASE_URL -f db/seed.sql",
     "db:activity": "node scripts/seed-activity.js",

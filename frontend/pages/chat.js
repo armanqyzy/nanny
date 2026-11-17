@@ -9,6 +9,7 @@ import UserProfilePopup from '../components/UserProfilePopup';
 import Icon from '../components/Icon';
 import { api, currentUser } from '../lib/api';
 import { avatarFallback, resolveAvatar } from '../lib/avatars';
+import { bookingChipText } from '../lib/services';
 import { useLanguage } from '../lib/i18n';
 import ReportModal from '../components/ReportModal';
 import EmptyState from '../components/EmptyState';
@@ -245,6 +246,20 @@ export default function Chat() {
     });
   }, [active]);
 
+  // /chat?user=5&booking=12 (from a booking card): the next message is tied to that booking.
+  const [bookingContext, setBookingContext] = useState(null);
+  useEffect(() => {
+    const bookingId = Number(router.query.booking);
+    const userId = Number(router.query.user);
+    if (!bookingId || !userId) return;
+    api.get('/api/bookings/mine')
+      .then((data) => {
+        const found = [...(data.asOwner || []), ...(data.asSitter || [])].find((item) => Number(item.id) === bookingId);
+        if (found) setBookingContext({ ...found, userId });
+      })
+      .catch(() => {});
+  }, [router.query.booking, router.query.user]);
+
   // A link like /chat?user=5 opens that chat once. After that the user picks chats freely;
   // before this fix the query kept pulling them back into the same conversation.
   const handledQueryUserRef = useRef(null);
@@ -387,6 +402,10 @@ export default function Chat() {
     }
     const receiverId = active.id;
     const socket = socketRef.current;
+    if (bookingContext && bookingContext.userId === receiverId) {
+      payload = { ...payload, booking_id: bookingContext.id };
+    }
+    const clearContext = () => setBookingContext((ctx) => (ctx && ctx.userId === receiverId ? null : ctx));
     const hasAttachment = Boolean(payload.audio_url || payload.image_url || payload.file_url);
     const offlineText = language === 'ru'
       ? 'Нет соединения с чатом. Проверьте интернет и попробуйте ещё раз.'
@@ -397,8 +416,9 @@ export default function Chat() {
     // Without a live socket, plain text can still go through the REST API.
     if (!socket?.connected) {
       if (hasAttachment) throw new Error(offlineText);
-      const message = await api.post('/api/messages', { receiver_id: receiverId, body: payload.body });
+      const message = await api.post('/api/messages', { receiver_id: receiverId, body: payload.body, booking_id: payload.booking_id });
       setMessages((prev) => (activeRef.current?.id === receiverId ? upsertMessage(prev, message) : prev));
+      clearContext();
       loadThreads();
       return message;
     }
@@ -415,6 +435,7 @@ export default function Chat() {
             return;
           }
           setMessages((prev) => (activeRef.current?.id === receiverId ? upsertMessage(prev, response.message) : prev));
+          clearContext();
           resolve(response.message);
           loadThreads();
         }
@@ -728,6 +749,15 @@ export default function Chat() {
 
               {chatError && (
                 <div className="mx-4 mb-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{chatError}</div>
+              )}
+              {bookingContext && active && bookingContext.userId === active.id && (
+                <div className="mx-4 mb-2 flex items-center justify-between gap-3 rounded-2xl border border-nanny-blue/15 bg-[#f5f7ff] px-4 py-2 text-sm text-nanny-brownish">
+                  <span>
+                    📅 {language === 'ru' ? 'Пишем о брони: ' : language === 'kz' ? 'Брондау туралы: ' : 'About booking: '}
+                    <b>{bookingChipText(bookingContext, language)}</b>
+                  </span>
+                  <button type="button" className="text-nanny-brownish/60 hover:text-nanny-brownish" aria-label="×" onClick={() => setBookingContext(null)}>✕</button>
+                </div>
               )}
               <ChatInput
                 quickReplies={me?.role === 'admin' ? [] : [

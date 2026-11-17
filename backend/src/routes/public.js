@@ -40,4 +40,38 @@ router.get('/home', asyncHandler(async (_req, res) => {
   });
 }));
 
+const { matchDistricts, matchServices } = require('../utils/searchWords');
+
+// GET /api/public/search?q=... — quick search for the header: sitters and shop products.
+router.get('/search', asyncHandler(async (req, res) => {
+  const q = String(req.query.q || '').trim().slice(0, 60);
+  if (q.length < 2) return res.json({ sitters: [], products: [] });
+  const lower = q.toLowerCase();
+  const like = `%${q}%`;
+  const districts = matchDistricts(lower);
+  const services = matchServices(lower);
+
+  const { rows: sitters } = await db.query(
+    `SELECT s.id, u.full_name, u.avatar_url, s.district, s.rating, s.rating_count, s.price_per_day
+       FROM sitters s
+       JOIN users u ON u.id = s.user_id
+      WHERE s.review_status = 'approved' AND s.is_verified = TRUE AND u.is_blocked = FALSE
+        AND (u.full_name ILIKE $1 OR s.description ILIKE $1 OR s.district ILIKE $1
+             OR s.district = ANY($2::text[])
+             OR EXISTS (SELECT 1 FROM sitter_services ss WHERE ss.sitter_id = s.id AND ss.service = ANY($3::text[])))
+      ORDER BY s.rating DESC, s.rating_count DESC
+      LIMIT 5`,
+    [like, districts, services]
+  );
+  const { rows: products } = await db.query(
+    `SELECT id, title, price, image_url, category
+       FROM products
+      WHERE is_active = TRUE AND (title ILIKE $1 OR description ILIKE $1 OR category ILIKE $1)
+      ORDER BY title
+      LIMIT 5`,
+    [like]
+  );
+  res.json({ sitters, products });
+}));
+
 module.exports = router;

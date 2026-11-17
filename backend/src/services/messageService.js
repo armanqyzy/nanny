@@ -44,7 +44,32 @@ function validateMedia(value, label) {
   if (value.length > MAX_MEDIA_LENGTH) throw httpError(413, 'Attachment is too large. Maximum size is 5 MB.');
 }
 
-async function createMessage({ senderId, receiverId, body, audio_url, image_url, file_url }) {
+// Short booking info shown on a message that was written about a specific booking.
+const BOOKING_INFO_SQL = `
+  SELECT b.id AS booking_id, b.service AS booking_service, b.start_date AS booking_start_date,
+         b.end_date AS booking_end_date, b.status AS booking_status, p.name AS booking_pet_name
+    FROM bookings b JOIN pets p ON p.id = b.pet_id
+   WHERE b.id = $1`;
+
+async function attachBooking(message) {
+  if (!message?.booking_id) return message;
+  const { rows } = await db.query(BOOKING_INFO_SQL, [message.booking_id]);
+  return rows[0] ? { ...message, ...rows[0] } : message;
+}
+
+// A message may point at a booking only if both people in the chat are part of that booking.
+async function bookingBelongsToPair(bookingId, userA, userB) {
+  const { rows } = await db.query(
+    `SELECT b.owner_id, s.user_id AS sitter_user_id FROM bookings b JOIN sitters s ON s.id = b.sitter_id WHERE b.id = $1`,
+    [bookingId]
+  );
+  const row = rows[0];
+  if (!row) return false;
+  const pair = [Number(userA), Number(userB)].sort().join(':');
+  return pair === [row.owner_id, row.sitter_user_id].sort().join(':');
+}
+
+async function createMessage({ senderId, receiverId, body, audio_url, image_url, file_url, booking_id }) {
   receiverId = Number(receiverId);
   const text = typeof body === 'string' ? body.trim() : '';
   const hasContent = [text, audio_url, image_url, file_url].some((value) => String(value || '').trim());
@@ -65,14 +90,19 @@ async function createMessage({ senderId, receiverId, body, audio_url, image_url,
   if (!receiverRows[0]) throw httpError(404, 'This user does not exist anymore');
   if (receiverRows[0].is_blocked) throw httpError(403, 'This user is blocked and cannot receive messages');
 
+  const bookingId = Number(booking_id) || null;
+  if (bookingId && !(await bookingBelongsToPair(bookingId, senderId, receiverId))) {
+    throw httpError(403, 'This booking is not between you and this user');
+  }
+
   const { rows } = await db.query(
-    `INSERT INTO messages (sender_id, receiver_id, body, audio_url, image_url, file_url)
-     VALUES ($1,$2,$3,$4,$5,$6)
+    `INSERT INTO messages (sender_id, receiver_id, body, audio_url, image_url, file_url, booking_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
      RETURNING *`,
-    [senderId, receiverId, text || null, audio_url || null, image_url || null, file_url || null]
+    [senderId, receiverId, text || null, audio_url || null, image_url || null, file_url || null, bookingId]
   );
 
-  return normalizeMessage(rows[0]);
+  return attachBooking(normalizeMessage(rows[0]));
 }
 
 async function getThreads(userId) {
@@ -119,8 +149,11 @@ async function getThreads(userId) {
 
 async function getConversationHistory(userId, otherId) {
   const { rows } = await db.query(
-    `SELECT m.*
+    `SELECT m.*, b.service AS booking_service, b.start_date AS booking_start_date, b.end_date AS booking_end_date,
+            b.status AS booking_status, bp.name AS booking_pet_name
        FROM messages m
+       LEFT JOIN bookings b ON b.id = m.booking_id
+       LEFT JOIN pets bp ON bp.id = b.pet_id
        LEFT JOIN message_hidden_for_users hidden
          ON hidden.message_id = m.id AND hidden.user_id = $1
        LEFT JOIN deleted_conversations dc

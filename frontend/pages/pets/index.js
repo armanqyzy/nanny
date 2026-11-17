@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { absoluteAssetUrl, api, currentUser, uploadFile } from '../../lib/api';
 import Icon from '../../components/Icon';
 import ConfirmModal from '../../components/ConfirmModal';
+import { aiDoneMessage, aiLabel, useAiEnabled } from '../../lib/ai';
 import { useLanguage } from '../../lib/i18n';
 import { petSummaryLine } from '../../lib/pets';
 import PetVaccinationsModal from '../../components/PetVaccinationsModal';
@@ -64,6 +65,7 @@ export default function Pets() {
   const [photoError, setPhotoError] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
+  const aiEnabled = useAiEnabled();
   const [formError, setFormError] = useState('');
   const [petToDelete, setPetToDelete] = useState(null);
   const [pageError, setPageError] = useState('');
@@ -218,11 +220,7 @@ export default function Pets() {
         description: draft.description || prev.description,
       }));
       setFormError('');
-      setAiMessage(
-        draft.source === 'openai'
-          ? 'AI polished the pet profile for sitters.'
-          : 'Smart helper draft added. You can still edit everything.'
-      );
+      setAiMessage(aiDoneMessage(draft.source, language));
     } catch (err) {
       setAiMessage(err.message || 'AI helper failed.');
     } finally {
@@ -596,7 +594,7 @@ export default function Pets() {
                         className="btn-ghost text-sm shrink-0"
                         disabled={aiLoading}
                       >
-                        {aiLoading ? (t.aiWriting || 'AI is writing...') : (t.improveAi || 'Improve with AI')}
+                        {aiLoading ? (aiEnabled ? (t.aiWriting || 'AI is writing...') : '…') : aiLabel('improvePet', aiEnabled, language)}
                       </button>
                     </div>
 

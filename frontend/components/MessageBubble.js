@@ -1,3 +1,4 @@
+import { bookingChipText } from '../lib/services';
 import { useLanguage } from '../lib/i18n';
 
 function formatTime(value) {
@@ -30,6 +31,14 @@ export default function MessageBubble({ message, mine, onDeleteSelf, onDeleteEve
             </p>
           ) : (
             <div className="space-y-3">
+              {message.booking_id && message.booking_service && (
+                <a
+                  href="/bookings"
+                  className={`mb-2 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${mine ? 'bg-white/20 text-white' : 'bg-nanny-blue/10 text-nanny-blue'}`}
+                >
+                  📅 {bookingChipText(message, language)}
+                </a>
+              )}
               {message.body && <p className="text-sm leading-6 whitespace-pre-wrap">{message.body}</p>}
               {message.image_url && (
                 <img src={message.image_url} alt="Shared" className="max-h-72 rounded-2xl object-cover" />

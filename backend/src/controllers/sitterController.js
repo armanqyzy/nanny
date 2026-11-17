@@ -1,3 +1,4 @@
+const { matchDistricts, matchServices } = require('../utils/searchWords');
 const db = require('../config/db');
 const { recalculateSitterFraudScore } = require('../utils/fraud');
 
@@ -56,7 +57,19 @@ async function search(req, res) {
   if (city)        { params.push(city);                  filters.push(`s.city ILIKE $${params.length}`); }
   if (min_rating)  { params.push(Number(min_rating));    filters.push(`COALESCE(rs.avg_rating, 0) >= $${params.length}`); }
   if (max_price)   { params.push(Number(max_price));     filters.push(`s.price_per_day <= $${params.length}`); }
-  if (q)           { params.push(`%${q}%`);              filters.push(`(u.full_name ILIKE $${params.length} OR s.description ILIKE $${params.length})`); }
+  if (q) {
+    // Also understands district and service words typed in Russian or Kazakh ("Медеу", "прогулка").
+    const lower = String(q).toLowerCase();
+    params.push(`%${q}%`);
+    const likeIndex = params.length;
+    params.push(matchDistricts(lower));
+    const districtIndex = params.length;
+    params.push(matchServices(lower));
+    const serviceIndex = params.length;
+    filters.push(`(u.full_name ILIKE $${likeIndex} OR s.description ILIKE $${likeIndex} OR s.district ILIKE $${likeIndex}
+      OR s.district = ANY($${districtIndex}::text[])
+      OR EXISTS (SELECT 1 FROM sitter_services sq WHERE sq.sitter_id = s.id AND sq.service = ANY($${serviceIndex}::text[])))`);
+  }
 
   let sql = `
     SELECT s.id, s.user_id, u.full_name, u.avatar_url,

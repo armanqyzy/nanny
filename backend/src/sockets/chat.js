@@ -59,7 +59,7 @@ function registerChat(io) {
     });
 
     // client-initiated send (alternative to REST POST /api/messages)
-    socket.on('message:send', async ({ receiver_id, body, audio_url, image_url, file_url }, ack) => {
+    socket.on('message:send', async ({ receiver_id, body, audio_url, image_url, file_url, booking_id }, ack) => {
       try {
         const message = await createMessage({
           senderId: uid,
@@ -68,6 +68,7 @@ function registerChat(io) {
           audio_url,
           image_url,
           file_url,
+          booking_id,
         });
         io.to(`user:${receiver_id}`).emit('message:new', message);
         io.to(`user:${uid}`).emit('message:new', message);

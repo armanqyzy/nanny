@@ -12,3 +12,12 @@ export function serviceName(service, language = 'en') {
 export function localeFor(language) {
   return language === 'ru' ? 'ru-RU' : language === 'kz' ? 'kk-KZ' : 'en-US';
 }
+
+// "Walking · Barsik · 20 Dec" for a message or chat banner tied to a booking.
+export function bookingChipText(booking, language = 'en') {
+  const service = serviceName(booking.service || booking.booking_service, language);
+  const pet = booking.pet_name || booking.booking_pet_name || '';
+  const start = booking.start_date || booking.booking_start_date;
+  const date = start ? new Date(start).toLocaleDateString(localeFor(language), { day: 'numeric', month: 'short', timeZone: 'Asia/Almaty' }) : '';
+  return [service, pet, date].filter(Boolean).join(' · ');
+}

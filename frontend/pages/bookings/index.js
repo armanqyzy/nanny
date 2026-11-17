@@ -11,6 +11,7 @@ import { EMPTY_CARD, friendlyPaymentError, toPaymentPayload, validateCard } from
 import ReportModal from '../../components/ReportModal';
 import EmptyState from '../../components/EmptyState';
 import CancelBookingModal from '../../components/CancelBookingModal';
+import RescheduleModal from '../../components/RescheduleModal';
 import { POLICY_TEXT, cancelReasonLabel } from '../../lib/cancellation';
 import { localeFor, serviceName } from '../../lib/services';
 
@@ -81,6 +82,7 @@ export default function Bookings() {
   const reviewFromQuery = router.query.review;
   const [data, setData] = useState({ asOwner: [], asSitter: [] });
   const [cancelBooking, setCancelBooking] = useState(null);
+  const [rescheduleBooking, setRescheduleBooking] = useState(null);
   const [viewerRole, setViewerRole] = useState('');
   useEffect(() => { setViewerRole(currentUser()?.role || ''); }, []);
   const isSitterViewer = viewerRole === 'sitter';
@@ -403,6 +405,14 @@ export default function Bookings() {
             </div>
           </div>
 
+          {b.rescheduled_from_start && b.status !== 'cancelled' && (
+            <p className="mt-3 inline-flex rounded-full bg-nanny-blue/10 px-3 py-1 text-xs font-semibold text-nanny-blue">
+              {language === 'ru' ? 'Перенесено с ' : language === 'kz' ? 'Ауыстырылды: ' : 'Moved from '}
+              {formatDateRange(b.rescheduled_from_start, b.rescheduled_from_end, language)}
+              {b.status === 'pending' ? (language === 'ru' ? ' · ждёт подтверждения ситтера' : language === 'kz' ? ' · ситтердің растауын күтуде' : ' · waiting for the sitter') : ''}
+            </p>
+          )}
+
           {b.status === 'cancelled' && b.cancel_reason && (
             <div className="mt-3 rounded-2xl border border-red-100 bg-red-50/60 px-4 py-3 text-sm text-nanny-brownish">
               <p>
@@ -468,7 +478,7 @@ export default function Bookings() {
           <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => router.push(`/chat?user=${role === 'owner' ? (b.sitter_user_id || b.sitter_id) : b.owner_id}`)}
+              onClick={() => router.push(`/chat?user=${role === 'owner' ? (b.sitter_user_id || b.sitter_id) : b.owner_id}&booking=${b.id}`)}
               className="btn-ghost text-sm"
             >
               {role === 'owner' ? (t.messageSitter || 'Message sitter') : (t.messageOwner || 'Message owner')}
@@ -489,7 +499,14 @@ export default function Bookings() {
               <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'completed')} className="btn-secondary text-sm">{t.markCompleted || 'Mark completed'}</button>
             )}
             {['pending', 'confirmed'].includes(b.status) && (
-              <button disabled={busyBookingId === b.id} onClick={() => setCancelBooking(b)} className="btn-ghost text-sm text-red-600">{t.cancel || 'Cancel'}</button>
+              <>
+                {role === 'owner' && dayOf(b.start_date) >= todayInAppTimeZone() && (
+                  <button type="button" disabled={busyBookingId === b.id} onClick={() => setRescheduleBooking(b)} className="btn-ghost text-sm">
+                    {language === 'ru' ? 'Перенести' : language === 'kz' ? 'Ауыстыру' : 'Reschedule'}
+                  </button>
+                )}
+                <button disabled={busyBookingId === b.id} onClick={() => setCancelBooking(b)} className="btn-ghost text-sm text-red-600">{t.cancel || 'Cancel'}</button>
+              </>
             )}
           </div>
 
@@ -628,6 +645,15 @@ export default function Bookings() {
         </div>
       )}
       </div>
+
+      {rescheduleBooking && (
+        <RescheduleModal
+          booking={rescheduleBooking}
+          language={language}
+          onClose={() => setRescheduleBooking(null)}
+          onDone={() => { setRescheduleBooking(null); reload(); }}
+        />
+      )}
 
       {cancelBooking && (
         <CancelBookingModal

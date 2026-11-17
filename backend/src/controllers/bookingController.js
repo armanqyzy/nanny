@@ -604,6 +604,85 @@ async function pay(req, res) {
   res.json(updated[0]);
 }
 
+// The owner moves a pending or confirmed booking to other dates before it starts.
+// A confirmed booking goes back to "pending" so the sitter agrees to the new time.
+// A paid booking keeps the same number of days, so the price (and the payment) stay the same.
+async function reschedule(req, res) {
+  const { start_date, end_date, start_time = null, end_time = null } = req.body;
+  const { rows } = await db.query(
+    `SELECT b.*, s.user_id AS sitter_user_id, s.price_per_day, p.name AS pet_name, u.full_name AS owner_name
+       FROM bookings b
+       JOIN sitters s ON s.id = b.sitter_id
+       JOIN pets p ON p.id = b.pet_id
+       JOIN users u ON u.id = b.owner_id
+      WHERE b.id = $1 AND b.owner_id = $2`,
+    [req.params.id, req.user.id]
+  );
+  const booking = rows[0];
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  if (!['pending', 'confirmed'].includes(booking.status)) {
+    return res.status(400).json({ error: 'Перенести можно только ожидающее или подтверждённое бронирование.' });
+  }
+  if (pastDateError(booking.start_date, booking.start_time)) {
+    return res.status(400).json({ error: 'Бронирование уже началось, перенести его нельзя.' });
+  }
+  if (start_date > end_date) return res.status(400).json({ error: 'Дата окончания не может быть раньше даты начала.' });
+  if ((start_time && !end_time) || (!start_time && end_time)) {
+    return res.status(400).json({ error: 'Укажите и время начала, и время окончания, или оставьте оба пустыми.' });
+  }
+  if (start_time && end_time && start_time >= end_time) {
+    return res.status(400).json({ error: 'Время окончания должно быть позже времени начала.' });
+  }
+  const pastError = pastDateError(start_date, start_time);
+  if (pastError) return res.status(400).json({ error: 'Новая дата уже прошла. Выберите дату в будущем.' });
+
+  const dayCount = (from, to) => Math.round((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000) + 1;
+  const oldDays = dayCount(toDateString(booking.start_date), toDateString(booking.end_date));
+  const newDays = dayCount(start_date, end_date);
+  const paid = booking.payment_status === 'paid';
+  if (paid && newDays !== oldDays) {
+    return res.status(400).json({ error: `Бронирование уже оплачено, поэтому новые даты должны занимать столько же дней (${oldDays}).` });
+  }
+  const sameSlot = start_date === toDateString(booking.start_date) && end_date === toDateString(booking.end_date)
+    && String(start_time || '') === String(booking.start_time || '').slice(0, 5) && String(end_time || '') === String(booking.end_time || '').slice(0, 5);
+  if (sameSlot) return res.status(400).json({ error: 'Выберите даты или время, отличные от текущих.' });
+
+  const conflicts = await findBookingConflicts({
+    sitterId: booking.sitter_id, startDate: start_date, endDate: end_date,
+    startTime: start_time, endTime: end_time, excludeBookingId: booking.id,
+  });
+  if (conflicts.length) return res.status(409).json({ error: 'Ситтер занят в это время. Выберите другие даты или время.' });
+  const daysOff = await findDaysOffInRange(booking.sitter_id, start_date, end_date);
+  if (daysOff.length) return res.status(409).json({ error: `У ситтера выходной: ${daysOff.join(', ')}. Выберите другие даты.` });
+
+  const total = paid ? Number(booking.total_price) : newDays * await getDailyPrice(booking.sitter_id, booking.service, booking.price_per_day);
+  const { rows: updated } = await db.query(
+    `UPDATE bookings
+        SET rescheduled_from_start = start_date, rescheduled_from_end = end_date,
+            start_date = $2, end_date = $3, start_time = $4, end_time = $5, total_price = $6,
+            status = 'pending', rescheduled_at = NOW(), reschedule_count = reschedule_count + 1,
+            pending_reminder_sent_at = NULL
+      WHERE id = $1
+     RETURNING *`,
+    [booking.id, start_date, end_date, start_time, end_time, total]
+  );
+  await clearBookingReminderJobs(booking.id);
+
+  const fmt = (d) => d.split('-').reverse().join('.');
+  await notifyUser({
+    userId: booking.sitter_user_id,
+    type: 'booking_rescheduled',
+    title: 'Просьба перенести бронирование',
+    body: `${booking.owner_name} просит перенести ${serviceRu(booking.service)} для ${booking.pet_name}: `
+      + `с ${fmt(toDateString(booking.start_date))} на ${fmt(start_date)}${start_time ? ` в ${start_time}` : ''}. Подтвердите новую дату или отклоните.`,
+    meta: { booking_id: booking.id },
+    emailSubject: 'Просьба перенести бронирование',
+    emailText: `${booking.owner_name} просит перенести бронирование для ${booking.pet_name} на ${fmt(start_date)}. Откройте Nanny, чтобы ответить.`,
+  }, { io: req.app.get('io') });
+
+  res.json(updated[0]);
+}
+
 // Shows what a cancellation would mean before the user confirms it.
 async function cancelPreview(req, res) {
   const { rows } = await db.query(
@@ -636,4 +715,4 @@ async function cancelPreview(req, res) {
   });
 }
 
-module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings, pay, cancelPreview, remindPendingRequests, todayInAppTimeZone, toDateString };
+module.exports = { create, myBookings, updateStatus, rebook, expireStalePendingBookings, pay, cancelPreview, remindPendingRequests, reschedule, todayInAppTimeZone, toDateString };

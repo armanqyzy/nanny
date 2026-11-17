@@ -8,6 +8,7 @@ import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 import { petSummaryLine } from '../../lib/pets';
 import { serviceName } from '../../lib/services';
+import { aiDoneMessage, aiLabel, useAiEnabled } from '../../lib/ai';
 
 const SERVICE_HINTS = {
   en: {
@@ -95,6 +96,7 @@ function ReviewReplyForm({ review, language, onSaved }) {
 
 export default function SitterPage() {
   const { language } = useLanguage();
+  const aiEnabled = useAiEnabled();
   const router = useRouter();
   const { id } = router.query;
   const [sitter, setSitter] = useState(null);
@@ -308,9 +310,7 @@ export default function SitterPage() {
         existingNotes: book.notes,
       });
       setBook((prev) => ({ ...prev, notes: draft.notes || prev.notes }));
-      if (draft.source === 'fallback') {
-        setMsg({ type: 'ok', text: 'Smart helper filled in care notes. You can edit them before booking.' });
-      }
+      setMsg({ type: 'ok', text: aiDoneMessage(draft.source, language) });
     } catch (error) {
       setMsg({ type: 'err', text: error.message || 'Could not generate AI care notes.' });
     } finally {
@@ -596,7 +596,7 @@ export default function SitterPage() {
                   className="btn-ghost text-sm"
                   disabled={!book.pet_id || aiNotesLoading}
                 >
-                  {aiNotesLoading ? (t.aiPreparing || 'AI is preparing notes...') : (t.generateAi || 'Generate with AI')}
+                  {aiNotesLoading ? (aiEnabled ? (t.aiPreparing || 'AI is preparing notes...') : '…') : aiLabel('careNotes', aiEnabled, language)}
                 </button>
               </div>
               <textarea className="input" rows={3} placeholder={t.careNotesPlaceholder || 'Care notes…'}

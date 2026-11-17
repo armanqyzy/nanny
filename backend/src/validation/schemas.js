@@ -78,6 +78,12 @@ const bookingSchemas = {
     end_time: true,
     notes: true,
   }),
+  reschedule: z.object({
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    start_time: optionalTime,
+    end_time: optionalTime,
+  }),
   status: z.object({
     status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']),
     reason: z.string().trim().max(40).optional(),
@@ -100,6 +106,7 @@ const messageSchemas = {
     audio_url: mediaUrl.optional().nullable(),
     image_url: mediaUrl.optional().nullable(),
     file_url: mediaUrl.optional().nullable(),
+    booking_id: z.coerce.number().int().positive().optional().nullable(),
   }).refine((value) => value.body || value.audio_url || value.image_url || value.file_url, {
     message: 'Message must include text, audio, image or file content',
   }),

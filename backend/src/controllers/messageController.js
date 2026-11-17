@@ -43,7 +43,7 @@ async function history(req, res) {
 
 // POST /api/messages { receiver_id, body } — also broadcasts via socket.io
 async function send(req, res) {
-  const { receiver_id, body, audio_url, image_url, file_url } = req.body;
+  const { receiver_id, body, audio_url, image_url, file_url, booking_id } = req.body;
   const message = await createMessage({
     senderId: req.user.id,
     receiverId: receiver_id,
@@ -51,6 +51,7 @@ async function send(req, res) {
     audio_url,
     image_url,
     file_url,
+    booking_id,
   });
 
   const io = req.app.get('io');
