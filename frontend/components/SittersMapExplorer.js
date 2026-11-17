@@ -17,9 +17,10 @@ function buildQuery(filters, center, maxDistance, sort) {
   const params = new URLSearchParams({
     lat: String(center.lat),
     lng: String(center.lng),
-    max_distance: String(maxDistance),
     sort,
   });
+  // 0 means "anywhere": no radius limit, every sitter is shown.
+  if (Number(maxDistance) > 0) params.set('max_distance', String(maxDistance));
 
   Object.entries(filters || {}).forEach(([key, value]) => {
     if (value === '' || value == null || value === false) return;
@@ -318,7 +319,7 @@ export default function SittersMapExplorer({
       const suffix = t.noCoordinatesSuffix?.(stats.without_location_count);
       return `${t.noCoordinates || 'Matching sitters exist, but they have not filled in their map coordinates yet.'}${suffix ? ` ${suffix}` : ''}`;
     }
-    if (stats.with_location_count > 0 && !stats.in_radius_count) {
+    if (stats.with_location_count > 0 && !stats.in_radius_count && activeMaxDistance > 0) {
       return t.noRadiusMatch?.(activeMaxDistance) || `No sitters were found within ${activeMaxDistance} km.`;
     }
     return t.noMatch || 'No sitters with map coordinates match these filters yet.';
@@ -326,8 +327,13 @@ export default function SittersMapExplorer({
 
   const summary = useMemo(() => {
     if (!sitters.length) return emptyReason || t.noMatch || 'No sitters with map coordinates match these filters yet.';
+    if (!activeMaxDistance) {
+      if (language === 'ru') return `На карте показаны все ситтеры: ${sitters.length}`;
+      if (language === 'kz') return `Картада барлық ситтерлер: ${sitters.length}`;
+      return `${sitters.length} sitters shown on the map (any distance)`;
+    }
     return t.summary?.(sitters.length, activeMaxDistance) || `${sitters.length} sitters shown on the map within ${activeMaxDistance} km`;
-  }, [activeMaxDistance, emptyReason, sitters.length, t]);
+  }, [activeMaxDistance, emptyReason, language, sitters.length, t]);
 
   const visibleError = error && error !== (t.unavailable || 'Interactive map is temporarily unavailable, but sitter results are shown below.')
     ? error
@@ -633,7 +639,7 @@ export default function SittersMapExplorer({
           selectedZoneRef.current = null;
         }
 
-        searchRadiusRef.current = L.circle([activeCenter.lat, activeCenter.lng], {
+        searchRadiusRef.current = activeMaxDistance > 0 ? L.circle([activeCenter.lat, activeCenter.lng], {
           radius: activeMaxDistance * 1000,
           color: '#4f6bed',
           weight: 2,
@@ -642,7 +648,7 @@ export default function SittersMapExplorer({
           dashArray: '8 8',
           // Not clickable, so a click inside the circle moves the search center.
           interactive: false,
-        }).addTo(map);
+        }).addTo(map) : null;
 
         const userOuterRing = L.circleMarker([activeCenter.lat, activeCenter.lng], {
           radius: 13,
@@ -828,6 +834,7 @@ export default function SittersMapExplorer({
                   <option value={15}>15 km</option>
                   <option value={25}>25 km</option>
                   <option value={40}>40 km</option>
+                  <option value={0}>{language === 'ru' ? 'Везде' : language === 'kz' ? 'Барлық жерде' : 'Anywhere'}</option>
                 </select>
               </label>
               <button type="button" className="btn-ghost self-end" onClick={useMyLocation} disabled={isLocating}>
@@ -868,6 +875,11 @@ export default function SittersMapExplorer({
         {hasBrowserLocation && ` ${t.locationReady || 'Map centered on your location.'}`}
         {pickedPlace && !hasBrowserLocation && ` ${t.pickedPlace || 'Search area moved to the selected place.'}`}
       </p>
+      {!loading && !sitters.length && activeMaxDistance > 0 && stats.with_location_count > 0 && (
+        <button type="button" className="btn-secondary mt-3 text-sm" onClick={() => updateMaxDistance(0)}>
+          {language === 'ru' ? 'Показать ситтеров везде' : language === 'kz' ? 'Барлық жердегі ситтерлерді көрсету' : 'Show sitters everywhere'}
+        </button>
+      )}
       <p className="mt-1 text-xs text-nanny-brownish/60">{t.pickHint || 'Tip: click anywhere on the map to search for sitters around that place.'}</p>
       {visibleError && <p className="mt-3 text-sm text-red-600">{visibleError}</p>}
       {mapDiagnostics && (

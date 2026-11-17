@@ -17,7 +17,10 @@ export function parseMapStateFromQuery(query = {}) {
       lat: Number.isFinite(lat) ? lat : DEFAULT_MAP_CENTER.lat,
       lng: Number.isFinite(lng) ? lng : DEFAULT_MAP_CENTER.lng,
     },
-    maxDistance: Number.isFinite(maxDistance) && maxDistance > 0 ? maxDistance : DEFAULT_MAP_DISTANCE,
+    // "any" (or 0) = no radius limit.
+    maxDistance: query.max_distance === 'any' || query.max_distance === '0'
+      ? 0
+      : (Number.isFinite(maxDistance) && maxDistance > 0 ? maxDistance : DEFAULT_MAP_DISTANCE),
     sort: normalizeMapSort(query.sort),
   };
 }
@@ -36,7 +39,7 @@ export function buildSitterRouteQuery(filters = {}, mapState = {}) {
 
   if (mapState.center?.lat != null) query.lat = String(mapState.center.lat);
   if (mapState.center?.lng != null) query.lng = String(mapState.center.lng);
-  if (mapState.maxDistance != null) query.max_distance = String(mapState.maxDistance);
+  if (mapState.maxDistance != null) query.max_distance = mapState.maxDistance > 0 ? String(mapState.maxDistance) : 'any';
   if (mapState.sort) query.sort = normalizeMapSort(mapState.sort);
 
   return query;
