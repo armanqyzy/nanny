@@ -245,19 +245,24 @@ export default function Chat() {
     });
   }, [active]);
 
+  // A link like /chat?user=5 opens that chat once. After that the user picks chats freely;
+  // before this fix the query kept pulling them back into the same conversation.
+  const handledQueryUserRef = useRef(null);
+
   useEffect(() => {
     const targetUser = Number(router.query.user);
     if (!targetUser || !me) return;
     if (targetUser === me.id) return;
+    if (handledQueryUserRef.current === targetUser) return;
 
     const existing = threads.find((thread) => thread.id === targetUser);
     if (existing) {
-      if (!active || active.id !== existing.id) {
-        setActive(existing);
-        setMobileShowList(false);
-      }
+      handledQueryUserRef.current = targetUser;
+      setActive(existing);
+      setMobileShowList(false);
       return;
     }
+    handledQueryUserRef.current = targetUser;
 
     (async () => {
       const profileData = await api.get(`/api/users/${targetUser}`).catch(() => null);
@@ -275,7 +280,7 @@ export default function Chat() {
       setActive(starterThread);
       setMobileShowList(false);
     })();
-  }, [router.query.user, threads, me, active]);
+  }, [router.query.user, threads, me]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -285,6 +290,14 @@ export default function Chat() {
     if (!messageSearchOpen) return;
     messageSearchInputRef.current?.focus();
   }, [messageSearchOpen]);
+
+  function pickThread(thread) {
+    setActive(thread);
+    setMobileShowList(false);
+    if (router.query.user) {
+      router.replace({ pathname: '/chat' }, undefined, { shallow: true });
+    }
+  }
 
   function isSelf(userId) {
     return Boolean(userId) && userId === meRef.current?.id;
@@ -555,7 +568,7 @@ export default function Chat() {
             {pinnedSupportThread && (
               <button
                 type="button"
-                onClick={() => { setActive(pinnedSupportThread); setMobileShowList(false); }}
+                onClick={() => { pickThread(pinnedSupportThread); }}
                 className={`mb-3 w-full rounded-[24px] border p-3 text-left transition ${
                   active?.id === pinnedSupportThread.id
                     ? 'border-nanny-blue bg-white shadow-[0_16px_40px_rgba(74,108,255,0.12)]'
@@ -597,7 +610,7 @@ export default function Chat() {
                 <button
                   key={thread.id}
                   type="button"
-                  onClick={() => { setActive(thread); setMobileShowList(false); }}
+                  onClick={() => { pickThread(thread); }}
                   className={`w-full rounded-[24px] border px-3 py-3 text-left transition ${
                     active?.id === thread.id
                       ? 'border-nanny-blue bg-white shadow-[0_16px_40px_rgba(74,108,255,0.12)]'
