@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { resolveAvatar } from '../lib/avatars';
+import { avatarFallback, resolveAvatar } from '../lib/avatars';
 import Icon from '../components/Icon';
 import { useLanguage } from '../lib/i18n';
 
@@ -70,6 +70,7 @@ export default function ChatHeader({
           <div className="relative">
             <img
               src={resolveAvatar(active)}
+                    onError={avatarFallback(active)}
               alt={active.full_name}
               className="h-12 w-12 rounded-full object-cover ring-2 ring-nanny-orange/20"
             />

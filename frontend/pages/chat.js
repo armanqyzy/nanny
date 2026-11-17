@@ -8,7 +8,7 @@ import MessageBubble from '../components/MessageBubble';
 import UserProfilePopup from '../components/UserProfilePopup';
 import Icon from '../components/Icon';
 import { api, currentUser } from '../lib/api';
-import { resolveAvatar } from '../lib/avatars';
+import { avatarFallback, resolveAvatar } from '../lib/avatars';
 import { useLanguage } from '../lib/i18n';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
@@ -542,6 +542,7 @@ export default function Chat() {
                 <div className="flex items-center gap-3">
                   <img
                     src={resolveAvatar(pinnedSupportThread)}
+                    onError={avatarFallback(pinnedSupportThread)}
                     alt={pinnedSupportThread.display_name || pinnedSupportThread.full_name}
                     className="h-11 w-11 rounded-full object-cover"
                   />
@@ -573,6 +574,7 @@ export default function Chat() {
                     <div className="relative">
                       <img
                         src={resolveAvatar(thread)}
+                    onError={avatarFallback(thread)}
                         alt={thread.full_name}
                         className="h-12 w-12 rounded-full object-cover"
                       />

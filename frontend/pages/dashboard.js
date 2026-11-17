@@ -4,6 +4,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import Icon from '../components/Icon';
 import { absoluteAssetUrl, api, currentUser, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
+import { formatRating } from '../lib/rating';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -1174,7 +1175,7 @@ export default function Dashboard() {
                 <div className="font-bold">{sitter.full_name}</div>
                 <div className="mt-1 text-sm opacity-70">{sitter.address || 'Almaty'}</div>
                 <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                  <span className="badge bg-blue-100 text-nanny-blue">⭐ {Number(sitter.rating || 0).toFixed(1)}</span>
+                  <span className="badge bg-blue-100 text-nanny-blue">⭐ {formatRating(sitter.rating, sitter.rating_count, language)}</span>
                   <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{Number(sitter.distance_km || 0).toFixed(1)} km</span>
                 </div>
                 {sitter.ai_explanation && (
@@ -1217,7 +1218,7 @@ export default function Dashboard() {
                 <div className="font-bold">{sitter.full_name}</div>
                 <div className="mt-1 text-sm opacity-70">{sitter.city}, {sitter.district}</div>
                 <div className="mt-3 flex gap-2 text-sm">
-                  <span className="badge bg-blue-100 text-nanny-blue">⭐ {Number(sitter.rating || 0).toFixed(1)}</span>
+                  <span className="badge bg-blue-100 text-nanny-blue">⭐ {formatRating(sitter.rating, sitter.rating_count, language)}</span>
                   <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{Number(sitter.price_per_day || 0).toLocaleString()} ₸/day</span>
                 </div>
                 <button type="button" onClick={() => router.push(`/sitters/${sitter.id}`)} className="btn-primary mt-4 w-full">

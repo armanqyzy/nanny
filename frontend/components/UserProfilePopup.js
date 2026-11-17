@@ -1,4 +1,4 @@
-import { resolveAvatar } from '../lib/avatars';
+import { avatarFallback, resolveAvatar } from '../lib/avatars';
 import { useLanguage } from '../lib/i18n';
 
 export default function UserProfilePopup({ open, profile, onClose }) {
@@ -17,6 +17,7 @@ export default function UserProfilePopup({ open, profile, onClose }) {
           <div className="flex items-center gap-4">
             <img
               src={resolveAvatar(profile)}
+                    onError={avatarFallback(profile)}
               alt={profile.full_name}
               className="h-20 w-20 rounded-full object-cover"
             />

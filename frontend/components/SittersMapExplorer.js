@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { absoluteAssetUrl, api } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
+import { formatRating } from '../lib/rating';
 
 const DEFAULT_CENTER = { lat: 43.238949, lng: 76.889709 };
 const DEFAULT_SORT = 'nearest';
@@ -677,7 +678,7 @@ export default function SittersMapExplorer({
           marker.bindPopup(`
             <div style="min-width: 190px;">
               <strong>${sitter.full_name}</strong><br/>
-              ${t.rating || 'Rating'}: ${Number(sitter.rating || 0).toFixed(1)}<br/>
+              ${t.rating || 'Rating'}: ${formatRating(sitter.rating, sitter.rating_count, language)}<br/>
               ${t.distance || 'Distance'}: ${Number(sitter.distance_km || 0).toFixed(1)} km
             </div>
           `);
@@ -920,7 +921,7 @@ export default function SittersMapExplorer({
                   </div>
                   <p className="mt-3 text-sm opacity-75">{selected.description || t.caringBio || 'Caring sitter with verified profile and pet-friendly routine.'}</p>
                   <div className="mt-4 flex flex-wrap gap-2 text-sm">
-                    <span className="badge bg-blue-100 text-nanny-blue">⭐ {Number(selected.rating || 0).toFixed(1)}</span>
+                    <span className="badge bg-blue-100 text-nanny-blue">⭐ {formatRating(selected.rating, selected.rating_count, language)}</span>
                     <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{Number(selected.distance_km || 0).toFixed(1)} {t.kmAway || 'km away'}</span>
                     {selected.price_per_day != null && (
                       <span className="badge bg-nanny-cream text-nanny-brownish">
@@ -968,7 +969,7 @@ export default function SittersMapExplorer({
                     <div className="truncate text-xs opacity-60">{sitterAddress(sitter, t.cityFallback || 'Almaty')}</div>
                   </div>
                   <div className="text-right text-sm">
-                    <div>⭐ {Number(sitter.rating || 0).toFixed(1)}</div>
+                    <div>⭐ {formatRating(sitter.rating, sitter.rating_count, language)}</div>
                     <div className="opacity-60">{Number(sitter.distance_km || 0).toFixed(1)} km</div>
                   </div>
                 </div>

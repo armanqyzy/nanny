@@ -8,6 +8,7 @@ import SittersMapExplorer from '../../components/SittersMapExplorer';
 import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { buildSitterRouteQuery, parseMapStateFromQuery } from '../../lib/sitterMapState';
+import { formatRating } from '../../lib/rating';
 
 const INITIAL_FILTERS = {
   city: '',
@@ -343,7 +344,7 @@ export default function SittersList() {
                     </div>
                   </div>
                   <div className="mt-4 space-y-2 text-sm">
-                    <p><span className="font-semibold">{copy.rating}</span> {Number(sitter.rating).toFixed(1)}</p>
+                    <p><span className="font-semibold">{copy.rating}</span> {formatRating(sitter.rating, sitter.rating_count, language)}</p>
                     <p><span className="font-semibold">{copy.experience}</span> {sitter.experience_yrs}y</p>
                     <p><span className="font-semibold">{copy.price}</span> {Number(sitter.price_per_day).toLocaleString()} ₸/day</p>
                     <p><span className="font-semibold">{copy.zone}</span> {sitter.service_area_text || 'Almaty'}</p>
@@ -394,7 +395,7 @@ export default function SittersList() {
                   </div>
                 )}
                 <div className="mt-4 flex items-center justify-between text-sm">
-                  <span className="font-bold text-nanny-orange">⭐ {Number(s.rating).toFixed(1)}</span>
+                  <span className="font-bold text-nanny-orange">⭐ {formatRating(s.rating, s.rating_count, language)}</span>
                   <span className="opacity-70">{s.experience_yrs} {copy.expShort}</span>
                   <span className="font-bold">{Number(s.price_per_day).toLocaleString()} ₸/day</span>
                 </div>

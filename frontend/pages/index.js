@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BrandLogo from '../components/BrandLogo';
 import Icon from '../components/Icon';
 import { useLanguage } from '../lib/i18n';
+import { currentUser } from '../lib/api';
 
 const HOME_COPY = {
   en: {
@@ -370,6 +372,10 @@ function ReviewShowcase({
 export default function Home() {
   const { language } = useLanguage();
   const copy = HOME_COPY[language] || HOME_COPY.en;
+  // Signed-in users should not be asked to register again.
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => { setSignedIn(Boolean(currentUser())); }, []);
+  const findSitterLabel = language === 'ru' ? 'Найти ситтера' : language === 'kz' ? 'Ситтер табу' : 'Find a sitter';
 
   return (
     <>
@@ -442,7 +448,7 @@ export default function Home() {
               <h2 className="mt-4 text-4xl font-extrabold leading-tight text-nanny-blue">{copy.perksTitle}</h2>
               <p className="mt-4 text-sm leading-7 text-nanny-brownish/78">{copy.perksText}</p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/register" className="btn-secondary">{copy.perksPrimary}</Link>
+                <Link href={signedIn ? '/sitters' : '/register'} className="btn-secondary">{signedIn ? findSitterLabel : copy.perksPrimary}</Link>
                 <Link href="/sitters" className="btn-ghost">{copy.perksSecondary}</Link>
               </div>
             </div>
@@ -542,7 +548,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto flex items-center gap-6 rounded-2xl bg-white p-8 shadow-card">
           <div className="flex-1">
             <p className="italic font-semibold mb-3">{copy.ctaText}</p>
-            <Link href="/register" className="btn-primary">{copy.ctaButton}</Link>
+            <Link href={signedIn ? '/sitters' : '/register'} className="btn-primary">{signedIn ? findSitterLabel : copy.ctaButton}</Link>
           </div>
           <div className="flex items-center justify-center rounded-[28px] bg-nanny-cream/75 p-2 shadow-[0_16px_32px_rgba(233,122,31,0.12)]">
             <BrandLogo size="lg" />
