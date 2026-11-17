@@ -13,7 +13,7 @@ import { useLanguage } from '../lib/i18n';
 import ReportModal from '../components/ReportModal';
 import EmptyState from '../components/EmptyState';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 function upsertMessage(list, message) {
   if (list.some((item) => item.id === message.id)) {

@@ -238,8 +238,8 @@ export default function Calendar() {
                         </p>
                         <h4 className="mt-2 text-lg font-bold text-nanny-brownish">
                           {viewerRole === 'admin'
-                            ? `${e.sitter_name} with ${e.pet_name}`
-                            : `${e.pet_name} with ${e.sitter_name || 'sitter'}`}
+                            ? `${e.sitter_name} ${language === 'ru' ? 'с' : language === 'kz' ? '+' : 'with'} ${e.pet_name}`
+                            : `${e.pet_name} ${language === 'ru' ? 'и' : language === 'kz' ? '+' : 'with'} ${e.sitter_name || (language === 'ru' ? 'ситтер' : language === 'kz' ? 'ситтер' : 'sitter')}`}
                         </h4>
                         <p className="mt-1 text-sm capitalize text-nanny-brownish/70">{formatServiceLabel(e.service)}</p>
                       </div>

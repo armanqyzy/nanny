@@ -4,6 +4,13 @@ import DashboardLayout from '../components/DashboardLayout';
 import { absoluteAssetUrl, api, currentUser, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 
+const STATUS_NAMES = {
+  ru: { new: 'Новая', pending: 'На проверке', approved: 'Одобрено', rejected: 'Отклонено', submitted: 'Отправлено', clear: 'Пройдена', not_started: 'Не начата' },
+  kz: { new: 'Жаңа', pending: 'Тексерілуде', approved: 'Мақұлданды', rejected: 'Қабылданбады', submitted: 'Жіберілді', clear: 'Өтті', not_started: 'Басталмаған' },
+  en: { new: 'New', pending: 'Pending', approved: 'Approved', rejected: 'Rejected', submitted: 'Submitted', clear: 'Clear', not_started: 'Not started' },
+};
+const statusLabel = (status, language) => (STATUS_NAMES[language] || STATUS_NAMES.en)[status] || String(status).replace(/_/g, ' ');
+
 export default function VerificationPage() {
   const router = useRouter();
   const { language } = useLanguage();
@@ -177,17 +184,17 @@ export default function VerificationPage() {
   return (
     <DashboardLayout title={t.pageTitle || 'Verification center'}>
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <section className="card">
+        <section className="card min-w-0">
           <p className="text-xs uppercase tracking-[0.22em] opacity-60">{t.sitterTrust || 'Sitter trust'}</p>
-          <h2 className="mt-2 text-3xl font-bold text-nanny-blue">{t.verifiedBadge || 'Verified badge and manual review'}</h2>
+          <h2 className="mt-2 text-2xl font-bold text-nanny-blue sm:text-3xl">{t.verifiedBadge || 'Verified badge and manual review'}</h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-nanny-orange/15 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.18em] opacity-55">{t.reviewStatus || 'Review status'}</p>
-              <p className="mt-2 text-lg font-bold capitalize">{data?.review_status || 'new'}</p>
+              <p className="mt-2 text-lg font-bold capitalize">{statusLabel(data?.review_status || 'new', language)}</p>
             </div>
             <div className="rounded-2xl border border-nanny-orange/15 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.18em] opacity-55">{t.backgroundCheck || 'Background check'}</p>
-              <p className="mt-2 text-lg font-bold capitalize">{data?.background_check_status || 'pending'}</p>
+              <p className="mt-2 text-lg font-bold capitalize">{statusLabel(data?.background_check_status || 'pending', language)}</p>
             </div>
             <div className="rounded-2xl border border-nanny-orange/15 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.18em] opacity-55">{t.badge || 'Badge'}</p>
@@ -197,7 +204,7 @@ export default function VerificationPage() {
 
           <form onSubmit={save} className="mt-6 space-y-4">
             <label className="input flex cursor-pointer items-center justify-between gap-3">
-              <span className="truncate text-sm opacity-70">
+              <span className="min-w-0 truncate text-sm opacity-70">
                 {uploadMessage || (form.id_document_url ? (t.documentSelected || 'Document selected from media library') : (t.chooseFromLibrary || 'Choose verification document from media library'))}
               </span>
               <span className="btn-ghost whitespace-nowrap px-3 py-1 text-sm">{uploading ? (t.uploading || 'Uploading...') : (t.uploadFile || 'Upload file')}</span>
@@ -235,7 +242,7 @@ export default function VerificationPage() {
           </div>
         </section>
 
-        <section className="card">
+        <section className="card min-w-0">
           <p className="text-xs uppercase tracking-[0.22em] opacity-60">{t.approvalHistory || 'Approval history'}</p>
           <h3 className="mt-2 text-2xl font-bold text-nanny-deepOrange">{t.timeline || 'Timeline'}</h3>
           <div className="mt-5 space-y-4">

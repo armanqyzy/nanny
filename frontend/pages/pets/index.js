@@ -78,7 +78,10 @@ export default function Pets() {
   }[language] || {};
 
   useEffect(() => {
-    if (!currentUser()) { router.replace('/login'); return; }
+    const user = currentUser();
+    if (!user) { router.replace('/login'); return; }
+    // Pets belong to owners; sitters and admins have nothing to manage here.
+    if (user.role !== 'owner') { router.replace('/dashboard'); return; }
     reload();
   }, [router]);
 

@@ -6,6 +6,7 @@ import { absoluteAssetUrl, api, currentUser, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 import { formatRating } from '../lib/rating';
 import { petSummaryLine } from '../lib/pets';
+import { serviceName } from '../lib/services';
 import SitterAvailabilityPanel from '../components/SitterAvailabilityPanel';
 import IncomeChart from '../components/IncomeChart';
 import EmptyState from '../components/EmptyState';
@@ -28,6 +29,37 @@ function tr(language, en, ru, kz) {
   if (language === 'ru') return ru;
   if (language === 'kz') return kz;
   return en;
+}
+
+function matchExplanation(sitter, pet, language) {
+  const services = String(sitter.services || '').split(',').map((item) => item.trim()).filter(Boolean)
+    .map((service) => serviceName(service, language)).join(', ');
+  const km = Number(sitter.distance_km || 0).toFixed(1);
+  const petName = pet?.name;
+  const visits = Number(sitter.previous_bookings || 0);
+  const typeMatch = String((sitter.reasons || [])[0] || '').startsWith('Matches');
+  if (language === 'ru') {
+    return [
+      typeMatch && petName ? `Подходит для ${petName}: ситтер работает с такими питомцами.` : 'Ситтер рядом с вами и принимает заказы.',
+      services ? `Услуги: ${services}.` : '',
+      `Примерно ${km} км от вас.`,
+      visits ? `Вы уже бронировали этого ситтера (${visits}).` : '',
+    ].filter(Boolean).join(' ');
+  }
+  if (language === 'kz') {
+    return [
+      typeMatch && petName ? `${petName} үшін лайық: ситтер осындай жануарлармен жұмыс істейді.` : 'Ситтер жақын жерде және тапсырыс қабылдайды.',
+      services ? `Қызметтер: ${services}.` : '',
+      `Сізден шамамен ${km} км.`,
+      visits ? `Сіз бұл ситтерді бұрын броньдағансыз (${visits}).` : '',
+    ].filter(Boolean).join(' ');
+  }
+  return [
+    typeMatch && petName ? `A good fit for ${petName}: this sitter cares for pets like yours.` : 'A nearby sitter who takes bookings.',
+    services ? `Services: ${services}.` : '',
+    `About ${km} km from you.`,
+    visits ? `You have booked this sitter before (${visits}).` : '',
+  ].filter(Boolean).join(' ');
 }
 
 export default function Dashboard() {
@@ -1271,10 +1303,13 @@ export default function Dashboard() {
                   <span className="badge bg-blue-100 text-nanny-blue">⭐ {formatRating(sitter.rating, sitter.rating_count, language)}</span>
                   <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{Number(sitter.distance_km || 0).toFixed(1)} km</span>
                 </div>
-                {sitter.ai_explanation && (
+                {(sitter.ai_explanation || sitter.pet_type) && (
                   <div className="mt-3 rounded-2xl border border-nanny-blue/10 bg-[#f5f7ff] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-nanny-blue/70">AI match insight</p>
-                    <p className="mt-2 text-sm text-nanny-brownish">{sitter.ai_explanation}</p>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-nanny-blue/70">{tr(language, 'Why this sitter', 'Почему этот ситтер', 'Неге осы ситтер')}</p>
+                    <p className="mt-2 text-sm text-nanny-brownish">
+                      {/* The OpenAI text is kept as is; the built-in fallback is English only, so it is rebuilt here in the chosen language. */}
+                      {sitter.ai_source === 'openai' && language === 'en' ? sitter.ai_explanation : matchExplanation(sitter, recommendationPet, language)}
+                    </p>
                   </div>
                 )}
                 <button

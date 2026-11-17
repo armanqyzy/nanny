@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { api } from '../lib/api';
+import { api, currentUser } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 
 const CATEGORIES = ['booking_issue', 'payment_issue', 'safety_concern', 'sitter_report', 'shop_order', 'technical_issue', 'other'];
@@ -8,6 +8,7 @@ const CATEGORIES = ['booking_issue', 'payment_issue', 'safety_concern', 'sitter_
 export default function SupportPage() {
   const { language } = useLanguage();
   const [tickets, setTickets] = useState([]);
+  const [signedIn, setSignedIn] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -200,7 +201,9 @@ export default function SupportPage() {
   }
 
   useEffect(() => {
-    loadTickets();
+    const user = currentUser();
+    setSignedIn(Boolean(user));
+    if (user) loadTickets();
   }, []);
 
   function clearFieldError(name) {
@@ -350,9 +353,16 @@ export default function SupportPage() {
             {error && <p className="text-sm text-red-600">{error}</p>}
             {success && <p className="text-sm text-green-700">{success}</p>}
 
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? copy.sending : copy.createTicket}
-            </button>
+            {signedIn ? (
+              <button type="submit" disabled={saving} className="btn-primary">
+                {saving ? copy.sending : copy.createTicket}
+              </button>
+            ) : (
+              <div className="rounded-2xl border border-nanny-orange/15 bg-nanny-cream/45 p-4 text-sm">
+                <p>{language === 'ru' ? 'Чтобы отправить запрос, войдите в аккаунт: так поддержка сможет вам ответить.' : language === 'kz' ? 'Сұрау жіберу үшін аккаунтқа кіріңіз: сонда қолдау сізге жауап бере алады.' : 'Sign in to send a request, so support can reply to you.'}</p>
+                <a href="/login?next=/support" className="btn-primary mt-3">{language === 'ru' ? 'Войти' : language === 'kz' ? 'Кіру' : 'Sign in'}</a>
+              </div>
+            )}
           </form>
         </section>
 

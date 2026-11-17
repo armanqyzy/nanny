@@ -38,7 +38,7 @@ function StatusRail({ status, t }) {
   );
 }
 
-function OrderCard({ order, isAdmin = false, onStatusChange, t }) {
+function OrderCard({ order, isAdmin = false, onStatusChange, t, language = "en" }) {
   const details = parseCheckoutAddress(order.address);
 
   return (
@@ -91,7 +91,7 @@ function OrderCard({ order, isAdmin = false, onStatusChange, t }) {
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-nanny-orange/15 bg-nanny-cream/40 p-3 text-sm">
           <p className="text-xs uppercase tracking-[0.22em] text-nanny-brownish/50">{t.payment}</p>
-          <p className="mt-1 font-semibold">{order.payment_status || t.pending}</p>
+          <p className="mt-1 font-semibold">{({ paid: { ru: 'Оплачено', kz: 'Төленді' }, refunded: { ru: 'Возвращено', kz: 'Қайтарылды' }, failed: { ru: 'Ошибка оплаты', kz: 'Төлем қатесі' } }[order.payment_status]?.[language]) || order.payment_status || t.pending}</p>
           <p className="mt-1 text-nanny-brownish/70">{order.payment_method || t.card}</p>
         </div>
         <div className="rounded-xl border border-nanny-orange/15 bg-nanny-cream/40 p-3 text-sm">
@@ -112,7 +112,11 @@ function OrderCard({ order, isAdmin = false, onStatusChange, t }) {
                 {isAdmin ? t.destinationRecipient : t.whereOrderWillGo}
               </p>
               <h3 className="mt-1 text-lg font-bold text-nanny-deepOrange">
-                {details.delivery || t.deliveryDetails}
+                {details.delivery
+                  ? (details.delivery.toLowerCase().includes('pickup')
+                    ? t.pickupFromShop
+                    : (language === 'ru' ? 'Доставка курьером' : language === 'kz' ? 'Курьермен жеткізу' : details.delivery))
+                  : t.deliveryDetails}
               </h3>
             </div>
             <span className="badge bg-white text-nanny-brownish">
@@ -271,6 +275,7 @@ export default function Orders() {
       noOrdersText: 'Когда вы оформите заказ в магазине, он появится здесь с доставкой и данными оплаты.',
       notSpecified: 'Не указано',
       statusMeta: {
+        new: { label: 'Новый', description: 'Заказ создан и ждёт обработки магазином.' },
         pending: { label: 'Ожидает', description: 'Заказ создан и ждёт обработки магазином.' },
         paid: { label: 'Оплачен', description: 'Оплата подтверждена, заказ готовится.' },
         shipped: { label: 'Отправлен', description: 'Заказ передан в доставку или готов к выдаче.' },
@@ -323,6 +328,7 @@ export default function Orders() {
       noOrdersText: 'Дүкеннен тапсырыс бергенде, ол осы жерде жеткізу және төлем деректерімен бірге көрінеді.',
       notSpecified: 'Көрсетілмеген',
       statusMeta: {
+        new: { label: 'Жаңа', description: 'Тапсырыс жасалды және дүкен өңдеуін күтуде.' },
         pending: { label: 'Күтілуде', description: 'Тапсырыс жасалды және дүкен өңдеуін күтуде.' },
         paid: { label: 'Төленді', description: 'Төлем расталды, тапсырыс дайындалуда.' },
         shipped: { label: 'Жөнелтілді', description: 'Тапсырыс жеткізуге берілді не беруге дайын.' },
@@ -400,6 +406,7 @@ export default function Orders() {
         {orders.map((order) => (
           <OrderCard
             key={order.id}
+            language={language}
             order={order}
             isAdmin={isAdmin}
             onStatusChange={updateAdminOrderStatus}
