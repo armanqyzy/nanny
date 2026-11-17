@@ -6,6 +6,7 @@ import Icon from '../../components/Icon';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useLanguage } from '../../lib/i18n';
 import { petSummaryLine } from '../../lib/pets';
+import PetVaccinationsModal from '../../components/PetVaccinationsModal';
 
 const EMPTY = {
   name: '', pet_type: 'dog', gender: 'boy', age: '',
@@ -66,6 +67,9 @@ export default function Pets() {
   const [formError, setFormError] = useState('');
   const [petToDelete, setPetToDelete] = useState(null);
   const [pageError, setPageError] = useState('');
+  const [pageNotice, setPageNotice] = useState('');
+  const [medicalPet, setMedicalPet] = useState(null);
+  const L = (en, ru, kz) => (language === 'ru' ? ru : language === 'kz' ? kz : en);
   const [fieldErrors, setFieldErrors] = useState({});
   const t = {
     en: { petProfiles:'Pet profiles', petProfilesText:'Keep each pet card updated with care and health details.', healthNotes:'Health notes', healthNotesText:'Visible reminders for medicines, allergies and vaccinations.', quickAction:'Quick action', quickTitle:'Pet care stays clearer', quickText:'Photos from the media library, health reminders and behavior notes help sitters prepare faster.', noNotes:'No notes yet.', behavior:'Behavior:', health:'Health:', notSpecified:'Not specified', noHealth:'No health notes', edit:'Edit', delete:'Delete', addAnother:'Add another pet', createFirst:'Create first pet profile', addCardText:'Create a profile with photo, health notes and care preferences.', editor:'Pet profile editor', newProfile:'New pet profile', editTitle:'Edit pet profile', addPet:'Add my pet', addPetText:'Add the details a sitter needs before the first walk, stay or update.', close:'Close', profileCompletion:'Profile completion', completionText:'Photos, health details and behavior notes help sitters prepare faster.', general:'General information', generalText:'Start with the basics so bookings and recommendations stay accurate.', required:'Required', petType:'Pet type', gender:'Gender', age:'Age (years)', size:'Size', careLevel:'Care level', photoSection:'Photo from media library', photoText:'A real photo helps sitters recognize your pet right away.', replacePhoto:'Replace pet photo', choosePhoto:'Choose photo from media library', photoHint:'JPG, PNG or WEBP up to 5 MB. Clean, well-lit photos work best.', uploadPhoto:'Upload photo', selectedPhoto:'Photo selected from media library', previewPlaceholder:'Preview placeholder until you upload a photo', remove:'Remove', sitterNotes:'Care notes for sitters', sitterNotesText:'Describe temperament, health and any routines that matter during a booking.', aiWriting:'AI is writing...', improveAi:'Improve with AI', extraNotes:'Extra notes', livePreview:'Live preview', yourPetName:'Your pet name', defaultPreview:'Add a short sitter-facing note so care feels easier from the first booking.', addTemperament:'Add temperament notes', addHealth:'Add health notes', strongProfile:'What makes a strong pet profile', guide1:'Clear photo from your media library', guide2:'Real behavior notes, not just “good dog”', guide3:'Medication, allergies and feeding reminders', guide4:'Short sitter-facing description with routines', cancel:'Cancel', saveChanges:'Save changes', createProfile:'Create pet profile', deleteTitle:'Delete this pet profile?', deleteConfirm:'Delete pet', keepProfile:'Keep profile', customTypePlaceholder:'What kind of animal is it? Example: rabbit, hamster, turtle' },
@@ -158,8 +162,15 @@ export default function Pets() {
   async function removeConfirmed() {
     if (!petToDelete) return;
     try {
-      await api.delete(`/api/pets/${petToDelete.id}`);
+      const result = await api.delete(`/api/pets/${petToDelete.id}`);
       setPetToDelete(null);
+      if (result?.archived) {
+        setPageNotice(L(
+          'The pet has bookings, so it was moved to the archive. Booking history and sitter reviews are kept.',
+          'У питомца есть бронирования, поэтому он перенесён в архив. История броней и отзывы ситтеров сохранены.',
+          'Жануардың брондаулары бар, сондықтан ол мұрағатқа көшірілді. Брондау тарихы мен пікірлер сақталды.'
+        ));
+      }
       reload();
     } catch (err) {
       setPetToDelete(null);
@@ -262,6 +273,12 @@ export default function Pets() {
 
   return (
     <DashboardLayout title="My pets">
+      {medicalPet && (
+        <PetVaccinationsModal pet={medicalPet} language={language} onClose={() => setMedicalPet(null)} onChanged={reload} />
+      )}
+      {pageNotice && (
+        <div className="mb-4 rounded-2xl border border-nanny-blue/20 bg-nanny-blue/5 px-4 py-3 text-sm text-nanny-blue">{pageNotice}</div>
+      )}
       {pageError && (
         <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{pageError}</div>
       )}
@@ -305,8 +322,18 @@ export default function Pets() {
                 <p><span className="font-semibold text-nanny-brownish">{t.behavior || 'Behavior:'}</span> {p.behavior || (t.notSpecified || 'Not specified')}</p>
                 <p><span className="font-semibold text-nanny-brownish">{t.health || 'Health:'}</span> {p.health || (t.noHealth || 'No health notes')}</p>
               </div>
-              <div className="mt-4 flex gap-2">
+              {p.overdue_vaccines > 0 ? (
+                <p className="mt-3 inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
+                  {L('Vaccination overdue', 'Прививка просрочена', 'Екпе мерзімі өтті')}
+                </p>
+              ) : p.next_vaccine_due && (new Date(p.next_vaccine_due) - new Date()) / 86400000 <= 30 ? (
+                <p className="mt-3 inline-flex rounded-full bg-nanny-yellow/70 px-3 py-1 text-xs font-semibold text-nanny-brownish">
+                  {L('Vaccination due', 'Скоро прививка', 'Жақында екпе')}: {new Date(p.next_vaccine_due).toLocaleDateString(language === 'ru' ? 'ru-RU' : language === 'kz' ? 'kk-KZ' : 'en-US')}
+                </p>
+              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2">
                 <button onClick={() => editPet(p)} className="btn-ghost text-sm">{t.edit || 'Edit'}</button>
+                <button onClick={() => setMedicalPet(p)} className="btn-ghost text-sm">{L('Medical card', 'Медкарта', 'Медкарта')}</button>
                 <button onClick={() => setPetToDelete(p)} className="btn-ghost text-sm text-red-600">{t.delete || 'Delete'}</button>
               </div>
             </div>

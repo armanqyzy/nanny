@@ -6,6 +6,7 @@ const db = require('./db');
 // tables and columns without running psql by hand. Every statement uses IF NOT EXISTS.
 const AUTO_MIGRATIONS = [
   '2026-11-17-batch1-features.sql',
+  '2026-11-17-batch2-features.sql',
 ];
 
 async function ensureSchema() {

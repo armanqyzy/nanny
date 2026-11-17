@@ -3,7 +3,12 @@ const { auth, requireRole } = require('../middleware/auth');
 const c = require('../controllers/adminController');
 const asyncHandler = require('../middleware/asyncHandler');
 
+const { adminAudit, listAdminActions } = require('../middleware/adminAudit');
+
 router.use(auth, requireRole('admin'));
+router.use(adminAudit);
+
+router.get('/actions', asyncHandler(listAdminActions));
 
 router.get('/stats', asyncHandler(c.stats));
 router.get('/users', asyncHandler(c.listUsers));

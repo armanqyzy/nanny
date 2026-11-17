@@ -6,6 +6,7 @@ import PetUpdatesFeed from '../../components/PetUpdatesFeed';
 import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
+import ReportModal from '../../components/ReportModal';
 
 const EMPTY_PAYMENT = { card_holder: '', card_number: '', expiry: '', cvc: '' };
 
@@ -73,6 +74,7 @@ export default function Bookings() {
   const [payForm, setPayForm] = useState(EMPTY_PAYMENT);
   const [payError, setPayError] = useState('');
   const [paying, setPaying] = useState(false);
+  const [reportBooking, setReportBooking] = useState(null);
   const t = {
     en: {
       all: 'All', pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
@@ -369,6 +371,15 @@ export default function Bookings() {
             >
               {role === 'owner' ? (t.messageSitter || 'Message sitter') : (t.messageOwner || 'Message owner')}
             </button>
+            {b.status !== 'pending' && (
+              <button
+                type="button"
+                className="btn-ghost text-sm text-red-600"
+                onClick={() => setReportBooking({ id: b.id, name: contactName })}
+              >
+                {language === 'ru' ? 'Сообщить о проблеме' : language === 'kz' ? 'Мәселе туралы хабарлау' : 'Report a problem'}
+              </button>
+            )}
             {role === 'sitter' && b.status === 'pending' && (
               <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'confirmed')} className="btn-primary text-sm">{t.confirm || 'Confirm'}</button>
             )}
@@ -551,6 +562,16 @@ export default function Bookings() {
             </div>
           </div>
         </div>
+      )}
+
+      {reportBooking && (
+        <ReportModal
+          targetName={reportBooking.name}
+          bookingId={reportBooking.id}
+          defaultReason="no_show"
+          language={language}
+          onClose={() => setReportBooking(null)}
+        />
       )}
 
       {payBooking && (

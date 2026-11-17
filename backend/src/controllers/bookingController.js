@@ -72,45 +72,25 @@ async function findBookingConflicts({ sitterId, startDate, endDate, startTime, e
   return rows.filter((row) => overlapsTime(startTime, endTime, row.start_time, row.end_time));
 }
 
-async function create(req, res) {
-  const { sitter_id, pet_id, service, start_date, end_date, start_time, end_time, notes } = req.body;
-  if (!sitter_id || !pet_id || !service || !start_date || !end_date) {
-    return res.status(400).json({ error: 'sitter_id, pet_id, service, start_date, end_date are required' });
-  }
+// Checks one booking (one pet, one date range). Returns { error, status } or { total }.
+async function checkBookingItem(req, item, sitterRow) {
+  const { sitter_id, pet_id, service, start_date, end_date, start_time, end_time } = item;
 
   if (new Date(start_date) > new Date(end_date)) {
-    return res.status(400).json({ error: 'start_date must be before or equal to end_date' });
+    return { status: 400, error: 'start_date must be before or equal to end_date' };
   }
-
   if ((start_time && !end_time) || (!start_time && end_time)) {
-    return res.status(400).json({ error: 'Provide both start_time and end_time, or leave both empty' });
+    return { status: 400, error: 'Provide both start_time and end_time, or leave both empty' };
   }
-
   if (start_time && end_time && start_time >= end_time) {
-    return res.status(400).json({ error: 'end_time must be later than start_time' });
+    return { status: 400, error: 'end_time must be later than start_time' };
   }
-
   const pastError = pastDateError(start_date, start_time);
-  if (pastError) return res.status(400).json({ error: pastError });
+  if (pastError) return { status: 400, error: pastError };
 
-  const { rows: petRows } = await db.query(
-    'SELECT id, owner_id FROM pets WHERE id = $1',
-    [pet_id]
-  );
-  if (!petRows[0] || petRows[0].owner_id !== req.user.id) {
-    return res.status(403).json({ error: 'You can only create bookings for your own pets' });
-  }
-
-  // price calculation: (days) * sitter.price_per_day
-  const { rows: sRows } = await db.query(
-    `SELECT id, price_per_day, is_available, review_status, is_verified
-       FROM sitters
-      WHERE id = $1`,
-    [sitter_id]
-  );
-  if (!sRows[0]) return res.status(404).json({ error: 'Sitter not found' });
-  if (!sRows[0].is_available || sRows[0].review_status !== 'approved' || !sRows[0].is_verified) {
-    return res.status(400).json({ error: 'This sitter is not available for public booking' });
+  const { rows: petRows } = await db.query('SELECT id, owner_id, is_archived, name FROM pets WHERE id = $1', [pet_id]);
+  if (!petRows[0] || petRows[0].owner_id !== req.user.id || petRows[0].is_archived) {
+    return { status: 403, error: 'You can only create bookings for your own pets' };
   }
 
   // Same pet, same sitter, same dates and time already requested: do not create a duplicate.
@@ -125,60 +105,111 @@ async function create(req, res) {
     [req.user.id, sitter_id, pet_id, start_date, end_date, start_time || null, end_time || null]
   );
   if (duplicateRows[0]) {
-    return res.status(409).json({ error: 'You already have this booking request. Check your bookings page.' });
+    return { status: 409, error: `You already have this booking request for ${petRows[0].name} on ${start_date}. Check your bookings page.` };
   }
 
   const conflicts = await findBookingConflicts({
-    sitterId: sitter_id,
-    startDate: start_date,
-    endDate: end_date,
-    startTime: start_time || null,
-    endTime: end_time || null,
+    sitterId: sitter_id, startDate: start_date, endDate: end_date,
+    startTime: start_time || null, endTime: end_time || null,
   });
   if (conflicts.length) {
-    return res.status(409).json({ error: 'This sitter is not available for the selected date and time.' });
+    return { status: 409, error: `This sitter is not available on ${start_date} at the selected time.` };
   }
 
   const daysOff = await findDaysOffInRange(sitter_id, start_date, end_date);
   if (daysOff.length) {
-    return res.status(409).json({ error: `The sitter does not work on: ${daysOff.join(', ')}. Choose other dates.` });
+    return { status: 409, error: `The sitter does not work on: ${daysOff.join(', ')}. Choose other dates.` };
   }
 
-  const days = Math.max(
-    1,
-    Math.ceil((new Date(end_date) - new Date(start_date)) / 86400000) + 1
-  );
-  const total = days * await getDailyPrice(sitter_id, service, sRows[0].price_per_day);
+  const days = Math.max(1, Math.ceil((new Date(end_date) - new Date(start_date)) / 86400000) + 1);
+  const total = days * await getDailyPrice(sitter_id, service, sitterRow.price_per_day);
+  return { total, petName: petRows[0].name };
+}
 
-  const { rows } = await db.query(
-    `INSERT INTO bookings
-       (owner_id, sitter_id, pet_id, service, start_date, end_date, start_time, end_time, total_price, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-     RETURNING *`,
-    [req.user.id, sitter_id, pet_id, service, start_date, end_date, start_time || null, end_time || null, total, notes || null]
+// Dates for a weekly schedule: every chosen weekday (0 = Sunday) for N weeks from start_date.
+function expandWeeklySchedule(startDate, weekdays, weeks) {
+  const dates = [];
+  const start = new Date(`${startDate}T00:00:00Z`);
+  for (let offset = 0; offset < weeks * 7; offset += 1) {
+    const day = new Date(start.getTime() + offset * 86400000);
+    if (weekdays.includes(day.getUTCDay())) dates.push(day.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+async function create(req, res) {
+  const { sitter_id, pet_id, pet_ids, service, start_date, end_date, start_time, end_time, notes, repeat } = req.body;
+  if (!sitter_id || !pet_id || !service || !start_date || !end_date) {
+    return res.status(400).json({ error: 'sitter_id, pet_id, service, start_date, end_date are required' });
+  }
+
+  const { rows: sRows } = await db.query(
+    'SELECT id, price_per_day, is_available, review_status, is_verified FROM sitters WHERE id = $1',
+    [sitter_id]
   );
+  if (!sRows[0]) return res.status(404).json({ error: 'Sitter not found' });
+  if (!sRows[0].is_available || sRows[0].review_status !== 'approved' || !sRows[0].is_verified) {
+    return res.status(400).json({ error: 'This sitter is not available for public booking' });
+  }
+
+  // Several pets and/or a weekly schedule become several bookings that share one group id.
+  const pets = [...new Set([pet_id, ...(Array.isArray(pet_ids) ? pet_ids : [])].map(Number))];
+  let ranges = [{ start_date, end_date }];
+  if (repeat?.weekdays?.length && repeat?.weeks) {
+    const dates = expandWeeklySchedule(start_date, repeat.weekdays, repeat.weeks);
+    if (!dates.length) return res.status(400).json({ error: 'The chosen weekdays do not fall into the schedule.' });
+    ranges = dates.map((day) => ({ start_date: day, end_date: day }));
+  }
+  const items = [];
+  pets.forEach((pid) => ranges.forEach((range) => items.push({
+    sitter_id, pet_id: pid, service, start_time, end_time, ...range,
+  })));
+  if (items.length > 40) return res.status(400).json({ error: 'Too many bookings at once (max 40). Shorten the schedule.' });
+
+  // Check everything first, so either all bookings are created or none.
+  const checked = [];
+  for (const item of items) {
+    const result = await checkBookingItem(req, item, sRows[0]);
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    checked.push({ item, total: result.total, petName: result.petName });
+  }
+
+  const groupId = checked.length > 1 ? `g${Date.now()}${Math.floor(Math.random() * 1000)}` : null;
+  const created = [];
+  for (const { item, total } of checked) {
+    const { rows } = await db.query(
+      `INSERT INTO bookings
+         (owner_id, sitter_id, pet_id, service, start_date, end_date, start_time, end_time, total_price, notes, group_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING *`,
+      [req.user.id, sitter_id, item.pet_id, service, item.start_date, item.end_date,
+        start_time || null, end_time || null, total, notes || null, groupId]
+    );
+    created.push(rows[0]);
+  }
 
   const { rows: infoRows } = await db.query(
-    `SELECT u.id AS sitter_user_id, p.name AS pet_name
-       FROM sitters s
-       JOIN users u ON u.id = s.user_id
-       JOIN pets p ON p.id = $2
-      WHERE s.id = $1`,
-    [sitter_id, pet_id]
+    'SELECT u.id AS sitter_user_id FROM sitters s JOIN users u ON u.id = s.user_id WHERE s.id = $1',
+    [sitter_id]
   );
   if (infoRows[0]) {
+    const petNames = [...new Set(checked.map((c) => c.petName))].join(', ');
+    const what = created.length > 1 ? `${created.length} ${service} bookings` : service;
     await notifyUser({
       userId: infoRows[0].sitter_user_id,
       type: 'booking_request',
       title: 'New booking request',
-      body: `${req.user.full_name || 'A pet owner'} requested ${service} for ${infoRows[0].pet_name}.`,
-      meta: { booking_id: rows[0].id },
+      body: `${req.user.full_name || 'A pet owner'} requested ${what} for ${petNames}.`,
+      meta: { booking_id: created[0].id, group_id: groupId },
       emailSubject: 'New booking request on Nanny',
-      emailText: `${req.user.full_name || 'A pet owner'} requested ${service} for ${infoRows[0].pet_name}. Open Nanny to review the request.`,
-      smsText: `Nanny: new booking request for ${infoRows[0].pet_name}.`,
+      emailText: `${req.user.full_name || 'A pet owner'} requested ${what} for ${petNames}. Open Nanny to review the request.`,
+      smsText: `Nanny: new booking request for ${petNames}.`,
     }, { io: req.app.get('io') });
   }
-  res.status(201).json(rows[0]);
+
+  // A single booking keeps the old response shape; several bookings return a list.
+  if (created.length === 1) return res.status(201).json(created[0]);
+  return res.status(201).json({ group_id: groupId, bookings: created });
 }
 
 // Requests nobody confirmed before their last day can never happen any more.

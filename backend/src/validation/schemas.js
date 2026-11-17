@@ -63,7 +63,14 @@ const bookingBase = z.object({
 });
 
 const bookingSchemas = {
-  create: bookingBase,
+  create: bookingBase.extend({
+    // Extra pets for the same visit, and an optional weekly schedule (0 = Sunday ... 6 = Saturday).
+    pet_ids: z.array(z.coerce.number().int().positive()).max(5).optional().nullable(),
+    repeat: z.object({
+      weekdays: z.array(z.coerce.number().int().min(0).max(6)).min(1).max(7),
+      weeks: z.coerce.number().int().min(1).max(8),
+    }).optional().nullable(),
+  }),
   rebook: bookingBase.pick({
     start_date: true,
     end_date: true,

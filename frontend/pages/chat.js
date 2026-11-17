@@ -10,6 +10,7 @@ import Icon from '../components/Icon';
 import { api, currentUser } from '../lib/api';
 import { avatarFallback, resolveAvatar } from '../lib/avatars';
 import { useLanguage } from '../lib/i18n';
+import ReportModal from '../components/ReportModal';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 
@@ -122,6 +123,7 @@ export default function Chat() {
   // On phones only one panel fits: the conversation list or the open chat.
   const [mobileShowList, setMobileShowList] = useState(true);
   const [sitterTemplates, setSitterTemplates] = useState([]);
+  const [reportOpen, setReportOpen] = useState(false);
   const socketRef = useRef(null);
   const activeRef = useRef(null);
   const meRef = useRef(null);
@@ -645,6 +647,7 @@ export default function Chat() {
                 online={Boolean(onlineMap[active.id])}
                 onProfileOpen={() => setProfileOpen(true)}
                 onDeleteChat={deleteChat}
+                onReport={active.is_support || me?.role === 'admin' ? null : () => setReportOpen(true)}
                 messageSearchOpen={messageSearchOpen}
                 messageSearch={messageSearch}
                 onMessageSearchToggle={() => {
@@ -718,6 +721,10 @@ export default function Chat() {
           )}
         </section>
       </div>
+
+      {reportOpen && active && (
+        <ReportModal targetName={active.display_name || active.full_name} language={language} onClose={() => setReportOpen(false)} />
+      )}
 
       <UserProfilePopup open={profileOpen} profile={profile} onClose={() => setProfileOpen(false)} />
 

@@ -594,7 +594,22 @@ async function getMyDashboard(req, res) {
     [sitter.id]
   );
 
+  // Income per month for the last 6 months (completed bookings), for the dashboard chart.
+  const incomeByMonth = await db.query(
+    `SELECT to_char(m.month, 'YYYY-MM') AS month,
+            COALESCE(SUM(b.total_price), 0)::float AS total,
+            COUNT(b.id)::int AS bookings
+       FROM generate_series(date_trunc('month', CURRENT_DATE) - INTERVAL '5 month', date_trunc('month', CURRENT_DATE), INTERVAL '1 month') AS m(month)
+       LEFT JOIN bookings b
+         ON b.sitter_id = $1 AND b.status = 'completed'
+        AND date_trunc('month', b.end_date) = m.month
+      GROUP BY m.month
+      ORDER BY m.month`,
+    [sitter.id]
+  );
+
   res.json({
+    income_by_month: incomeByMonth.rows,
     sitter: {
       ...sitter,
       services: services.rows,

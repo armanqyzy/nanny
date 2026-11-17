@@ -8,6 +8,7 @@ export default function ChatHeader({
   online,
   onProfileOpen,
   onDeleteChat,
+  onReport,
   messageSearchOpen,
   messageSearch,
   onMessageSearchToggle,
@@ -95,6 +96,11 @@ export default function ChatHeader({
           >
             <Icon name="search" className="h-4 w-4" />
           </button>
+          {onReport && (
+            <button type="button" className="btn-ghost px-3 py-2 text-sm text-red-600" onClick={onReport}>
+              {language === 'ru' ? 'Пожаловаться' : language === 'kz' ? 'Шағымдану' : 'Report'}
+            </button>
+          )}
           <button type="button" className="btn-ghost gap-2 px-3 py-2 text-sm" onClick={onDeleteChat}>
             <Icon name="chat" className="h-4 w-4" />
             {t.clearChat || 'Clear chat'}

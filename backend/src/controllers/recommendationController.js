@@ -22,7 +22,7 @@ async function recommendations(req, res) {
 
   const petQuery = petId
     ? await db.query('SELECT * FROM pets WHERE id=$1 AND owner_id=$2', [petId, req.user.id])
-    : await db.query('SELECT * FROM pets WHERE owner_id=$1 ORDER BY created_at DESC LIMIT 1', [req.user.id]);
+    : await db.query('SELECT * FROM pets WHERE owner_id=$1 AND is_archived = FALSE ORDER BY created_at DESC LIMIT 1', [req.user.id]);
 
   const pet = petQuery.rows[0];
   // No pet yet is a normal state for new owners, not an error.

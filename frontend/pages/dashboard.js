@@ -7,6 +7,7 @@ import { useLanguage } from '../lib/i18n';
 import { formatRating } from '../lib/rating';
 import { petSummaryLine } from '../lib/pets';
 import SitterAvailabilityPanel from '../components/SitterAvailabilityPanel';
+import IncomeChart from '../components/IncomeChart';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -1005,6 +1006,10 @@ export default function Dashboard() {
               </div>
             </div>
           </section>
+
+          {sitterDashboard?.income_by_month && (
+            <IncomeChart data={sitterDashboard.income_by_month} language={language} />
+          )}
 
           {sitterDashboard?.sitter && (
             <SitterAvailabilityPanel

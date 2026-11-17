@@ -26,7 +26,29 @@ const SERVICE_HINTS = {
   },
 };
 
-const EMPTY_BOOKING = { pet_id: '', service: 'walking', start_date: '', end_date: '', start_time: '', end_time: '', notes: '' };
+const EMPTY_BOOKING = {
+  pet_id: '', extra_pet_ids: [], service: 'walking', start_date: '', end_date: '', start_time: '', end_time: '', notes: '',
+  // Weekly schedule: chosen weekdays (0 = Sunday) repeated for a number of weeks.
+  repeat_on: false, repeat_weekdays: [], repeat_weeks: 4,
+};
+
+const WEEKDAYS = [
+  { value: 1, en: 'Mon', ru: 'Пн', kz: 'Дс' }, { value: 2, en: 'Tue', ru: 'Вт', kz: 'Сс' },
+  { value: 3, en: 'Wed', ru: 'Ср', kz: 'Ср' }, { value: 4, en: 'Thu', ru: 'Чт', kz: 'Бс' },
+  { value: 5, en: 'Fri', ru: 'Пт', kz: 'Жм' }, { value: 6, en: 'Sat', ru: 'Сб', kz: 'Сн' },
+  { value: 0, en: 'Sun', ru: 'Вс', kz: 'Жк' },
+];
+
+// Same rule as the server: every chosen weekday for N weeks starting from the start date.
+function countWeeklyDates(startDate, weekdays, weeks) {
+  if (!startDate || !weekdays.length) return 0;
+  const start = new Date(`${startDate}T00:00:00Z`);
+  let count = 0;
+  for (let offset = 0; offset < weeks * 7; offset += 1) {
+    if (weekdays.includes(new Date(start.getTime() + offset * 86400000).getUTCDay())) count += 1;
+  }
+  return count;
+}
 
 // Lets the sitter answer (or edit the answer to) a review on their own profile.
 function ReviewReplyForm({ review, language, onSaved }) {
@@ -110,9 +132,19 @@ export default function SitterPage() {
   const bookingDays = parsedStart && parsedEnd && parsedEnd >= parsedStart
     ? Math.max(1, Math.ceil((parsedEnd - parsedStart) / 86400000) + 1)
     : 0;
-  const estimatedTotal = bookingDays
-    ? Number((selectedService?.price ?? sitter?.price_per_day ?? 0)) * bookingDays
+  const selectedPetIds = [book.pet_id, ...(book.extra_pet_ids || [])].filter(Boolean).map(String);
+  const repeatCount = book.repeat_on ? countWeeklyDates(book.start_date, book.repeat_weekdays, Number(book.repeat_weeks)) : 0;
+  const billedDays = book.repeat_on ? repeatCount : bookingDays;
+  const estimatedTotal = billedDays
+    ? Number((selectedService?.price ?? sitter?.price_per_day ?? 0)) * billedDays * Math.max(1, selectedPetIds.length)
     : 0;
+  const L = (en, ru, kz) => (language === 'ru' ? ru : language === 'kz' ? kz : en);
+
+  function togglePet(petId) {
+    const id = String(petId);
+    const next = selectedPetIds.includes(id) ? selectedPetIds.filter((x) => x !== id) : [...selectedPetIds, id];
+    setBook((prev) => ({ ...prev, pet_id: next[0] || '', extra_pet_ids: next.slice(1) }));
+  }
   const availabilityTone = checkingAvailability
     ? 'checking'
     : availability?.available
@@ -202,7 +234,9 @@ export default function SitterPage() {
     if (!book.pet_id) nextErrors.pet_id = 'Choose which pet needs care.';
     if (!book.service) nextErrors.service = 'Choose the service you want to book.';
     if (!book.start_date) nextErrors.start_date = 'Choose the first care day.';
-    if (!book.end_date) nextErrors.end_date = 'Choose the last care day.';
+    if (!book.end_date && !book.repeat_on) nextErrors.end_date = 'Choose the last care day.';
+    if (book.repeat_on && !book.repeat_weekdays.length) nextErrors.start_date = L('Choose at least one weekday for the schedule.', 'Выберите хотя бы один день недели для расписания.', 'Кестеге кемінде бір апта күнін таңдаңыз.');
+    if (book.repeat_on && book.repeat_weekdays.length && !repeatCount) nextErrors.start_date = L('No dates match this schedule.', 'Под это расписание не попадает ни одной даты.', 'Бұл кестеге бірде-бір күн сәйкес келмейді.');
     const today = todayInAppTimeZone();
     if (book.start_date && book.start_date < today) nextErrors.start_date = 'You cannot book a date in the past.';
     if (book.end_date && book.end_date < today) nextErrors.end_date = 'You cannot book a date in the past.';
@@ -229,19 +263,29 @@ export default function SitterPage() {
     setFieldErrors({});
     setSubmittingBooking(true);
     try {
-      await api.post('/api/bookings', {
+      const created = await api.post('/api/bookings', {
         sitter_id: Number(id),
-        ...book,
+        service: book.service,
+        start_date: book.start_date,
+        end_date: book.repeat_on ? book.start_date : book.end_date,
         pet_id: Number(book.pet_id),
+        pet_ids: (book.extra_pet_ids || []).map(Number),
+        repeat: book.repeat_on ? { weekdays: book.repeat_weekdays, weeks: Number(book.repeat_weeks) } : null,
         start_time: book.start_time || null,
         end_time: book.end_time || null,
         notes: book.notes || null,
       });
+      const createdCount = created?.bookings?.length || 1;
       // Reset the form so the same booking is not submitted twice by accident.
       setBook({ ...EMPTY_BOOKING, service: sitter?.services?.[0]?.service || EMPTY_BOOKING.service });
       setAvailability(null);
       setFieldErrors({});
-      setMsg({ type: 'ok', text: 'Booking created! Check your bookings page.' });
+      setMsg({
+        type: 'ok',
+        text: createdCount > 1
+          ? L(`${createdCount} bookings created! Check your bookings page.`, `Создано бронирований: ${createdCount}. Смотрите страницу бронирований.`, `${createdCount} брондау жасалды! Брондаулар бетін қараңыз.`)
+          : 'Booking created! Check your bookings page.',
+      });
     } catch (e) {
       setMsg({ type: 'err', text: e?.message || 'We could not create the booking yet. Please review the selected dates, times and required fields.' });
     } finally {
@@ -374,13 +418,13 @@ export default function SitterPage() {
               <p className="mb-2 text-sm font-semibold text-nanny-deepOrange">{t.choosePetNeedsCare || 'Which pet needs care?'}</p>
               <div className="grid gap-2 md:grid-cols-2">
                 {pets.map((p) => {
-                  const active = String(book.pet_id) === String(p.id);
+                  const active = selectedPetIds.includes(String(p.id));
                   return (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => {
-                        setBook({ ...book, pet_id: String(p.id) });
+                        togglePet(p.id);
                         clearFieldError('pet_id');
                       }}
                       className={`rounded-2xl border px-4 py-4 text-left transition ${
@@ -435,6 +479,39 @@ export default function SitterPage() {
               {fieldErrors.service && <p className="mt-3 text-sm text-red-600">{fieldErrors.service}</p>}
             </div>
 
+            <div className="rounded-[26px] border border-nanny-orange/15 bg-white p-4">
+              <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-nanny-deepOrange">
+                <input type="checkbox" checked={book.repeat_on}
+                       onChange={(e) => { setBook({ ...book, repeat_on: e.target.checked }); clearFieldError('start_date'); clearFieldError('end_date'); }} />
+                {L('Repeat every week (for regular walks or visits)', 'Повторять каждую неделю (для регулярных прогулок и визитов)', 'Әр апта сайын қайталау (тұрақты серуендер үшін)')}
+              </label>
+              {book.repeat_on && (
+                <div className="mt-3 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {WEEKDAYS.map((day) => {
+                      const on = book.repeat_weekdays.includes(day.value);
+                      return (
+                        <button key={day.value} type="button"
+                                onClick={() => setBook({ ...book, repeat_weekdays: on ? book.repeat_weekdays.filter((d) => d !== day.value) : [...book.repeat_weekdays, day.value] })}
+                                className={`rounded-full border px-3 py-1.5 text-sm ${on ? 'border-nanny-orange bg-nanny-orange text-white' : 'border-nanny-orange/20 bg-white'}`}>
+                          {day[language] || day.en}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    {L('For', 'В течение', 'Ұзақтығы')}
+                    <select className="input max-w-[110px]" value={book.repeat_weeks} onChange={(e) => setBook({ ...book, repeat_weeks: Number(e.target.value) })}>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    {L('weeks', 'нед.', 'апта')}
+                    {repeatCount > 0 && <span className="opacity-70">• {L(`${repeatCount} visits`, `визитов: ${repeatCount}`, `${repeatCount} рет`)}</span>}
+                  </label>
+                  <p className="text-xs opacity-65">{L('The start date is the first week of the schedule. Each visit is a separate booking.', 'Дата начала — первая неделя расписания. Каждый визит станет отдельной бронью.', 'Басталу күні — кестенің бірінші аптасы. Әр келу жеке брондау болады.')}</p>
+                </div>
+              )}
+            </div>
+
             <div className={`grid gap-4 rounded-[26px] border p-4 md:grid-cols-2 transition ${fieldErrors.start_date || fieldErrors.end_date || fieldErrors.time || fieldErrors.availability ? 'border-red-300 bg-red-50/30 ring-2 ring-red-100' : 'border-transparent'}`}>
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.startDate || 'Start date'}</label>
@@ -450,7 +527,7 @@ export default function SitterPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.endDate || 'End date'}</label>
                 <p className="mb-2 text-xs opacity-65">{t.lastCareDay || 'The last day included in this booking.'}</p>
-                <input className={`input ${fieldErrors.end_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.end_date} min={book.start_date || todayInAppTimeZone()}
+                <input className={`input ${fieldErrors.end_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.repeat_on ? book.start_date : book.end_date} disabled={book.repeat_on} min={book.start_date || todayInAppTimeZone()}
                        onChange={(e) => {
                          setBook({ ...book, end_date: e.target.value });
                          clearFieldError('end_date');
@@ -559,7 +636,9 @@ export default function SitterPage() {
                     <div className="flex items-start justify-between gap-4">
                       <span className="opacity-60">{t.pet || 'Pet'}</span>
                       <span className="text-right font-medium">
-                        {selectedPet ? `${selectedPet.name} (${selectedPet.pet_type})` : (t.choosePet || 'Choose a pet')}
+                        {selectedPetIds.length
+                          ? pets.filter((pet) => selectedPetIds.includes(String(pet.id))).map((pet) => pet.name).join(', ')
+                          : (t.choosePet || 'Choose a pet')}
                       </span>
                     </div>
                     <div className="flex items-start justify-between gap-4">
@@ -571,7 +650,9 @@ export default function SitterPage() {
                     <div className="flex items-start justify-between gap-4">
                       <span className="opacity-60">{t.dates || 'Dates'}</span>
                       <span className="text-right font-medium">
-                        {book.start_date && book.end_date
+                        {book.repeat_on && book.start_date
+                          ? `${L('from', 'с', 'бастап')} ${new Date(`${book.start_date}T00:00:00`).toLocaleDateString()} • ${WEEKDAYS.filter((d) => book.repeat_weekdays.includes(d.value)).map((d) => d[language] || d.en).join(', ') || '—'} • ${book.repeat_weeks} ${L('wk', 'нед.', 'апта')}`
+                          : book.start_date && book.end_date
                           ? `${new Date(`${book.start_date}T00:00:00`).toLocaleDateString()} → ${new Date(`${book.end_date}T00:00:00`).toLocaleDateString()}`
                           : (t.chooseDates || 'Choose start and end date')}
                       </span>
@@ -585,7 +666,7 @@ export default function SitterPage() {
                     <div className="flex items-start justify-between gap-4">
                       <span className="opacity-60">{t.duration || 'Duration'}</span>
                       <span className="text-right font-medium">
-                        {bookingDays ? `${bookingDays} ${bookingDays === 1 ? (t.day || 'day') : (t.days || 'days')}` : (t.notSelectedYet || 'Not selected yet')}
+                        {billedDays ? `${billedDays} ${billedDays === 1 ? (t.day || 'day') : (t.days || 'days')}${selectedPetIds.length > 1 ? ` × ${selectedPetIds.length}` : ''}` : (t.notSelectedYet || 'Not selected yet')}
                       </span>
                     </div>
                   </div>

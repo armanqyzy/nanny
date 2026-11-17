@@ -5,6 +5,18 @@ import { useLanguage } from '../lib/i18n';
 import { formatRating } from '../lib/rating';
 
 const DEFAULT_CENTER = { lat: 43.238949, lng: 76.889709 };
+
+// Approximate centers of Almaty districts, so people can search an area without clicking the map.
+const ALMATY_DISTRICTS = [
+  { key: 'almaly', en: 'Almaly', ru: 'Алмалинский', kz: 'Алмалы', lat: 43.2510, lng: 76.9050 },
+  { key: 'auezov', en: 'Auezov', ru: 'Ауэзовский', kz: 'Әуезов', lat: 43.2290, lng: 76.8350 },
+  { key: 'bostandyk', en: 'Bostandyk', ru: 'Бостандыкский', kz: 'Бостандық', lat: 43.2140, lng: 76.9100 },
+  { key: 'zhetysu', en: 'Zhetysu', ru: 'Жетысуский', kz: 'Жетісу', lat: 43.2900, lng: 76.9300 },
+  { key: 'medeu', en: 'Medeu', ru: 'Медеуский', kz: 'Медеу', lat: 43.2400, lng: 76.9800 },
+  { key: 'nauryzbay', en: 'Nauryzbay', ru: 'Наурызбайский', kz: 'Наурызбай', lat: 43.2000, lng: 76.7900 },
+  { key: 'turksib', en: 'Turksib', ru: 'Турксибский', kz: 'Түрксіб', lat: 43.3400, lng: 76.9600 },
+  { key: 'alatau', en: 'Alatau', ru: 'Алатауский', kz: 'Алатау', lat: 43.2650, lng: 76.7900 },
+];
 const DEFAULT_SORT = 'nearest';
 const MAP_CENTER_STORAGE_KEY = 'nanny_map_center';
 
@@ -841,6 +853,20 @@ export default function SittersMapExplorer({
               <button type="button" className="btn-ghost self-end" onClick={useMyLocation} disabled={isLocating}>
                 {isLocating ? (t.locating || 'Detecting location...') : (t.detectLocation || 'Use my location')}
               </button>
+              <label className="text-sm">
+                <span className="mb-1 block font-semibold">{language === 'ru' ? 'Район' : language === 'kz' ? 'Аудан' : 'District'}</span>
+                <select
+                  className="input min-w-[170px]"
+                  value=""
+                  onChange={(event) => {
+                    const district = ALMATY_DISTRICTS.find((item) => item.key === event.target.value);
+                    if (district) pickCenterRef.current?.({ lat: district.lat, lng: district.lng });
+                  }}
+                >
+                  <option value="">{language === 'ru' ? 'Выбрать район...' : language === 'kz' ? 'Ауданды таңдау...' : 'Choose a district...'}</option>
+                  {ALMATY_DISTRICTS.map((item) => <option key={item.key} value={item.key}>{item[language] || item.en}</option>)}
+                </select>
+              </label>
               <button type="button" className="btn-ghost self-end" onClick={resetToAlmaty}>
                 {language === 'ru' ? 'Центр Алматы' : language === 'kz' ? 'Алматы орталығы' : 'Almaty center'}
               </button>

@@ -5,6 +5,7 @@ import { absoluteAssetUrl, api, currentUser, uploadFile } from '../../lib/api';
 import { SHOP_ORDER_STATUSES, handleProductImageError } from '../../lib/shop';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useLanguage } from '../../lib/i18n';
+import AdminActionLog from '../../components/AdminActionLog';
 
 const REVIEW_STATUSES = ['new', 'in_review', 'approved', 'changes_requested', 'rejected'];
 
@@ -499,6 +500,7 @@ export default function Admin() {
           ['support',  t.support],
           ['orders',   t.shopOrders],
           ['products', t.products],
+          ['log', language === 'ru' ? 'Журнал' : language === 'kz' ? 'Журнал' : 'Action log'],
         ].map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
                   className={`btn text-sm ${tab === k ? 'btn-secondary' : 'btn-ghost'}`}>
@@ -506,6 +508,8 @@ export default function Admin() {
           </button>
         ))}
       </nav>
+
+      {tab === 'log' && <AdminActionLog language={language} />}
 
       {tab === 'stats' && stats && (
         <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-4">
