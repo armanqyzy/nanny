@@ -231,9 +231,6 @@ export default function Shop() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3 self-start lg:self-auto">
-            <button onClick={() => router.push('/shop/orders')} className="btn-ghost">
-              {copy.viewOrders}
-            </button>
             <button onClick={goCheckout} className="btn-primary" disabled={cartCount === 0}>
               <span className="inline-flex items-center gap-2">
                 <Icon name="shop" className="h-4 w-4" />

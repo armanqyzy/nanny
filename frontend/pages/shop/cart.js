@@ -316,11 +316,11 @@ export default function Cart() {
                 <div>
                   <p className="font-semibold text-nanny-blue">Card payment</p>
                   <p className="mt-1 text-sm text-nanny-brownish/75">
-                    Enter your card details to pay now and receive an order confirmation by email.
+                    Demo payment: no money is charged. Please use the test card 4242 4242 4242 4242, any future date and any 3-digit code. Do not enter a real card.
                   </p>
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-nanny-blue">
-                  Secure
+                  Demo
                 </span>
               </div>
 

@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 async function getBookingAudience(bookingId) {
   const { rows } = await db.query(
-    `SELECT b.id, b.owner_id, s.user_id AS sitter_user_id, p.name AS pet_name
+    `SELECT b.id, b.owner_id, b.status, s.user_id AS sitter_user_id, p.name AS pet_name
        FROM bookings b
        JOIN sitters s ON s.id = b.sitter_id
        JOIN pets p ON p.id = b.pet_id
@@ -16,6 +16,9 @@ async function createBookingUpdate({ bookingId, senderId, updateType, body, phot
   const booking = await getBookingAudience(bookingId);
   if (!booking) throw new Error('Booking not found');
   if (booking.sitter_user_id !== senderId) throw new Error('Only the sitter can send pet updates');
+  if (booking.status && !['confirmed', 'completed'].includes(booking.status)) {
+    throw new Error('Pet updates can be sent only for confirmed bookings');
+  }
 
   const { rows } = await db.query(
     `INSERT INTO booking_updates (booking_id, sender_id, update_type, body, photo_url, status_label)

@@ -15,6 +15,13 @@ const DEFAULT_SITTER_SERVICES = [
 
 const WORK_DAY_OPTIONS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Small inline translations for blocks that had English-only text.
+function tr(language, en, ru, kz) {
+  if (language === 'ru') return ru;
+  if (language === 'kz') return kz;
+  return en;
+}
+
 export default function Dashboard() {
   const { language } = useLanguage();
   const router = useRouter();
@@ -1142,12 +1149,14 @@ export default function Dashboard() {
       <section className="mt-8 card">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="font-bold text-nanny-deepOrange">Recommended sitters for your pet</h3>
+            <h3 className="font-bold text-nanny-deepOrange">{tr(language, 'Recommended sitters for your pet', 'Рекомендуемые ситтеры для вашего питомца', 'Жануарыңызға ұсынылатын ситтерлер')}</h3>
             <p className="mt-1 text-sm opacity-70">
-              {recommendationPet ? `Based on ${recommendationPet.name}, past bookings, rating and distance.` : 'We will suggest sitters once you add a pet.'}
+              {recommendationPet
+                ? tr(language, `Based on ${recommendationPet.name}, past bookings, rating and distance.`, `С учётом питомца ${recommendationPet.name}, прошлых бронирований, рейтинга и расстояния.`, `${recommendationPet.name}, бұрынғы брондаулар, рейтинг және қашықтық негізінде.`)
+                : tr(language, 'We will suggest sitters once you add a pet.', 'Мы предложим ситтеров, когда вы добавите питомца.', 'Жануар қосқаннан кейін ситтерлерді ұсынамыз.')}
             </p>
           </div>
-          <a href="/map" className="btn-ghost">Open map</a>
+          <a href="/map" className="btn-ghost">{tr(language, 'Open map', 'Открыть карту', 'Картаны ашу')}</a>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {recommendations.map((sitter) => (
@@ -1175,13 +1184,13 @@ export default function Dashboard() {
                   onClick={() => router.push(`/sitters/${sitter.id}`)}
                   className="btn-primary mt-4 w-full"
                 >
-                  View sitter
+                  {tr(language, 'View sitter', 'Открыть профиль', 'Профильді ашу')}
                 </button>
               </div>
             </article>
           ))}
           {recommendations.length === 0 && (
-            <p className="text-sm opacity-60">No recommendations yet. Add a pet profile and bookings to improve suggestions.</p>
+            <p className="text-sm opacity-60">{tr(language, 'No recommendations yet. Add a pet profile and bookings to improve suggestions.', 'Рекомендаций пока нет. Добавьте питомца и бронирования, чтобы подборка стала точнее.', 'Ұсыныстар әзірге жоқ. Ұсыныстарды жақсарту үшін жануар мен брондау қосыңыз.')}</p>
           )}
         </div>
       </section>
@@ -1191,10 +1200,10 @@ export default function Dashboard() {
       <section className="mt-8 card">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="font-bold text-nanny-deepOrange">Saved sitters</h3>
-            <p className="mt-1 text-sm opacity-70">Quick access to sitters you liked.</p>
+            <h3 className="font-bold text-nanny-deepOrange">{tr(language, 'Saved sitters', 'Сохранённые ситтеры', 'Сақталған ситтерлер')}</h3>
+            <p className="mt-1 text-sm opacity-70">{tr(language, 'Quick access to sitters you liked.', 'Быстрый доступ к ситтерам, которые вам понравились.', 'Ұнаған ситтерлерге жылдам қолжетімділік.')}</p>
           </div>
-          <a href="/sitters" className="btn-ghost">Browse sitters</a>
+          <a href="/sitters" className="btn-ghost">{tr(language, 'Browse sitters', 'Найти ситтера', 'Ситтер іздеу')}</a>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {favorites.map((sitter) => (
@@ -1214,7 +1223,7 @@ export default function Dashboard() {
             </article>
           ))}
           {favorites.length === 0 && (
-            <p className="text-sm opacity-60">No saved sitters yet. Use the heart icon on sitter cards.</p>
+            <p className="text-sm opacity-60">{tr(language, 'No saved sitters yet. Use the heart icon on sitter cards.', 'Сохранённых ситтеров пока нет. Нажмите на сердечко на карточке ситтера.', 'Сақталған ситтерлер әзірге жоқ. Ситтер картасындағы жүрекшені басыңыз.')}</p>
           )}
         </div>
       </section>
@@ -1225,13 +1234,13 @@ export default function Dashboard() {
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-nanny-cream text-nanny-deepOrange">
             <Icon name="booking" className="h-5 w-5" />
           </span>
-          <h3 className="font-bold text-nanny-deepOrange">My bookings</h3>
+          <h3 className="font-bold text-nanny-deepOrange">{tr(language, 'My bookings', 'Мои бронирования', 'Менің брондауларым')}</h3>
         </div>
         <div className="mt-3 text-sm">
-          <p className="font-semibold">As owner: {book.asOwner.length}</p>
-          <p className="font-semibold">As sitter: {book.asSitter.length}</p>
+          <p className="font-semibold">{tr(language, 'As owner', 'Как владелец', 'Иесі ретінде')}: {book.asOwner.length}</p>
+          <p className="font-semibold">{tr(language, 'As sitter', 'Как ситтер', 'Ситтер ретінде')}: {book.asSitter.length}</p>
         </div>
-        <a href="/bookings" className="btn-ghost mt-4 inline-flex">See all</a>
+        <a href="/bookings" className="btn-ghost mt-4 inline-flex">{tr(language, 'See all', 'Смотреть все', 'Барлығын көру')}</a>
       </section>
     </DashboardLayout>
   );

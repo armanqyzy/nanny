@@ -51,10 +51,34 @@ async function getById(req, res) {
     services = result.rows;
   }
 
-  res.json({
-    ...rows[0],
-    services,
-  });
+  const profile = { ...rows[0], services };
+  const viewerId = req.user?.id;
+  const isSelf = viewerId === profile.id;
+  const viewerIsAdmin = req.user?.role === 'admin';
+
+  // Phone and address are shared only between people who have a booking together,
+  // with the support team, or with yourself. Email stays private to you and admins.
+  let canSeeContacts = isSelf || viewerIsAdmin || profile.role === 'admin';
+  if (!canSeeContacts && viewerId) {
+    const { rows: linkRows } = await db.query(
+      `SELECT 1
+         FROM bookings b
+         JOIN sitters s ON s.id = b.sitter_id
+        WHERE (b.owner_id = $1 AND s.user_id = $2)
+           OR (b.owner_id = $2 AND s.user_id = $1)
+        LIMIT 1`,
+      [viewerId, profile.id]
+    );
+    canSeeContacts = linkRows.length > 0;
+  }
+
+  if (!isSelf && !viewerIsAdmin) delete profile.email;
+  if (!canSeeContacts) {
+    profile.phone = null;
+    profile.address = null;
+  }
+
+  res.json(profile);
 }
 
 module.exports = { updateMe, getById };

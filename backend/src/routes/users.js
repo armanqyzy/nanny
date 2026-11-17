@@ -7,6 +7,7 @@ const { userSchemas } = require('../validation/schemas');
 const { common } = require('../middleware/validate');
 
 router.put('/me', auth, validateBody(userSchemas.updateMe), asyncHandler(updateMe));
-router.get('/:id', validateParams(common.idParam), asyncHandler(getById));
+// Login required: profiles contain contact details.
+router.get('/:id', auth, validateParams(common.idParam), asyncHandler(getById));
 
 module.exports = router;

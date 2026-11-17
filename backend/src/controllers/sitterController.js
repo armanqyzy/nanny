@@ -211,6 +211,11 @@ async function mapSearch(req, res) {
   });
 }
 
+const PRIVATE_SITTER_FIELDS = [
+  'email', 'phone', 'id_document_url', 'admin_notes', 'reviewed_by', 'reviewed_at',
+  'rejection_reason', 'fraud_score', 'is_flagged', 'auto_reply_templates', 'background_check_status',
+];
+
 async function getOne(req, res) {
   const { rows } = await db.query(
     `SELECT s.*, u.full_name, u.avatar_url, u.phone, u.email
@@ -258,8 +263,15 @@ async function getOne(req, res) {
     ? Number((reviews.rows.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviewCount).toFixed(1))
     : 0;
 
+  const profile = { ...rows[0] };
+  const canSeePrivate = req.user?.role === 'admin' || req.user?.id === rows[0].user_id;
+  if (!canSeePrivate) {
+    // Public profile: never expose contacts, ID documents or moderation data.
+    PRIVATE_SITTER_FIELDS.forEach((field) => { delete profile[field]; });
+  }
+
   res.json({
-    ...rows[0],
+    ...profile,
     rating: averageRating,
     rating_count: reviewCount,
     is_favorite: isFavorite,

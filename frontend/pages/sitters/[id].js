@@ -7,6 +7,24 @@ import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 
+const SERVICE_HINTS = {
+  en: {
+    walking: 'A walk or outdoor activity session', daycare: 'Care during the day without overnight stay',
+    boarding: 'Overnight stay and longer care', grooming: 'Basic grooming and hygiene support',
+    home_visit: 'A visit to your home for care and check-ins', medication_care: 'Help with medicine and care routine',
+  },
+  ru: {
+    walking: 'Прогулка или активность на улице', daycare: 'Присмотр днём без ночёвки',
+    boarding: 'Передержка с ночёвкой и долгий уход', grooming: 'Базовый груминг и гигиена',
+    home_visit: 'Визит к вам домой для ухода и проверки', medication_care: 'Помощь с лекарствами и режимом ухода',
+  },
+  kz: {
+    walking: 'Серуен немесе далада белсенділік', daycare: 'Түнемесіз күндізгі күтім',
+    boarding: 'Түнеумен ұзақ күтім', grooming: 'Негізгі груминг және гигиена',
+    home_visit: 'Күтім мен тексеру үшін үйіңізге келу', medication_care: 'Дәрі-дәрмек пен күтім режиміне көмек',
+  },
+};
+
 const EMPTY_BOOKING = { pet_id: '', service: 'walking', start_date: '', end_date: '', start_time: '', end_time: '', notes: '' };
 
 export default function SitterPage() {
@@ -341,12 +359,7 @@ export default function SitterPage() {
                     >
                       <div className="font-semibold">{service.replace('_', ' ')}</div>
                       <div className="mt-1 text-sm normal-case opacity-70">
-                        {service === 'walking' && 'A walk or outdoor activity session'}
-                        {service === 'daycare' && 'Care during the day without overnight stay'}
-                        {service === 'boarding' && 'Overnight stay and longer care'}
-                        {service === 'grooming' && 'Basic grooming and hygiene support'}
-                        {service === 'home_visit' && 'A visit to your home for care and check-ins'}
-                        {service === 'medication_care' && 'Help with medicine and care routine'}
+                        {(SERVICE_HINTS[language] || SERVICE_HINTS.en)[service] || ''}
                       </div>
                     </button>
                   );
