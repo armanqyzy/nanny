@@ -155,6 +155,7 @@ export default function SittersMapExplorer({
   const textRef = useRef({});
   const autoLocateAttemptedRef = useRef(false);
   const restoredSavedCenterRef = useRef(false);
+  const pickCenterRef = useRef(null);
   const [sitters, setSitters] = useState([]);
   const [stats, setStats] = useState({
     total_count: 0,
@@ -198,6 +199,8 @@ export default function SittersMapExplorer({
       rating: 'Rating',
       cityFallback: 'Almaty',
       locationReady: 'Map centered on your location.',
+      pickHint: 'Tip: click anywhere on the map to search for sitters around that place.',
+      pickedPlace: 'Search area moved to the selected place.',
       locationUnavailable: 'Browser geolocation is unavailable. The map stays centered on Almaty.',
       locationDenied: 'Location permission was blocked. The map stays centered on Almaty.',
       mapPin: 'Your search area',
@@ -237,6 +240,8 @@ export default function SittersMapExplorer({
       rating: 'Рейтинг',
       cityFallback: 'Алматы',
       locationReady: 'Карта центрирована по вашей геолокации.',
+      pickHint: 'Подсказка: нажмите на любое место на карте, чтобы искать ситтеров рядом с ним.',
+      pickedPlace: 'Область поиска перенесена в выбранное место.',
       locationUnavailable: 'Геолокация в браузере недоступна. Карта останется на Алматы.',
       locationDenied: 'Доступ к геолокации запрещен. Карта останется на Алматы.',
       mapPin: 'Район поиска',
@@ -276,6 +281,8 @@ export default function SittersMapExplorer({
       rating: 'Рейтинг',
       cityFallback: 'Алматы',
       locationReady: 'Карта сіздің геолокацияңызға центрленді.',
+      pickHint: 'Кеңес: сол маңнан ситтер іздеу үшін картаның кез келген жерін басыңыз.',
+      pickedPlace: 'Іздеу аймағы таңдалған орынға ауыстырылды.',
       locationUnavailable: 'Браузердегі геолокация қолжетімсіз. Карта Алматыда қалады.',
       locationDenied: 'Геолокацияға рұқсат берілмеді. Карта Алматыда қалады.',
       mapPin: 'Іздеу аймағы',
@@ -340,6 +347,20 @@ export default function SittersMapExplorer({
     if (onSortChange) onSortChange(nextSort);
     else setInternalSort(nextSort);
   }
+
+  const [pickedPlace, setPickedPlace] = useState(false);
+
+  // Lets the user choose the search center by clicking on the map.
+  pickCenterRef.current = (latlng) => {
+    const nextCenter = normalizeCenter({ lat: latlng?.lat, lng: latlng?.lng });
+    if (!nextCenter) return;
+    saveMapCenter(nextCenter);
+    setHasBrowserLocation(false);
+    setPickedPlace(true);
+    setSelected(null);
+    setError('');
+    updateCenter(nextCenter);
+  };
 
   function handleLocationSuccess(position, { silent = false } = {}) {
     const nextCenter = normalizeCenter({
@@ -406,6 +427,7 @@ export default function SittersMapExplorer({
   function getMarkerStyle(isSelected) {
     return {
       radius: isSelected ? 14 : 11,
+      bubblingMouseEvents: false,
       color: isSelected ? '#7a3513' : '#8f3d15',
       weight: isSelected ? 4 : 3,
       fillColor: isSelected ? '#ff8d2b' : '#f7a74d',
@@ -461,6 +483,9 @@ export default function SittersMapExplorer({
 
       attachTileDiagnostics(tileLayer);
       tileLayer.addTo(map);
+
+      map.on('click', (event) => pickCenterRef.current?.(event.latlng));
+      mapNodeRef.current.style.cursor = 'crosshair';
 
       mapInstanceRef.current = map;
       tileLayerRef.current = tileLayer;
@@ -615,10 +640,9 @@ export default function SittersMapExplorer({
           fillColor: '#4f6bed',
           fillOpacity: 0.08,
           dashArray: '8 8',
+          // Not clickable, so a click inside the circle moves the search center.
+          interactive: false,
         }).addTo(map);
-        searchRadiusRef.current.bindPopup(
-          `<strong>${t.searchRadius?.(activeMaxDistance) || `Search radius: ${activeMaxDistance} km`}</strong>`
-        );
 
         const userOuterRing = L.circleMarker([activeCenter.lat, activeCenter.lng], {
           radius: 13,
@@ -626,6 +650,7 @@ export default function SittersMapExplorer({
           weight: 3,
           fillColor: '#7f98ff',
           fillOpacity: 0.18,
+          bubblingMouseEvents: false,
         });
         const userInnerDot = L.circleMarker([activeCenter.lat, activeCenter.lng], {
           radius: 5,
@@ -633,6 +658,7 @@ export default function SittersMapExplorer({
           weight: 2,
           fillColor: '#2550e8',
           fillOpacity: 1,
+          bubblingMouseEvents: false,
         });
 
         userMarkerRef.current = L.featureGroup([userOuterRing, userInnerDot]).addTo(map);
@@ -810,7 +836,9 @@ export default function SittersMapExplorer({
       <p className="mt-4 text-sm text-nanny-brownish">
         {summary}
         {hasBrowserLocation && ` ${t.locationReady || 'Map centered on your location.'}`}
+        {pickedPlace && !hasBrowserLocation && ` ${t.pickedPlace || 'Search area moved to the selected place.'}`}
       </p>
+      <p className="mt-1 text-xs text-nanny-brownish/60">{t.pickHint || 'Tip: click anywhere on the map to search for sitters around that place.'}</p>
       {visibleError && <p className="mt-3 text-sm text-red-600">{visibleError}</p>}
       {mapDiagnostics && (
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -833,8 +861,8 @@ export default function SittersMapExplorer({
             <h3 className="text-lg font-bold text-nanny-deepOrange">{t.selected || 'Selected sitter'}</h3>
             {selected ? (
               <>
-                <img
-                  src={selected.avatar_url ? absoluteAssetUrl(selected.avatar_url) : 'https://placedog.net/400/250'}
+                <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }}
+                  src={selected.avatar_url ? absoluteAssetUrl(selected.avatar_url) : '/pet-placeholder.png'}
                   alt={selected.full_name}
                   className="mt-4 h-44 w-full rounded-2xl object-cover"
                 />

@@ -5,6 +5,7 @@ import { api, currentUser } from '../../lib/api';
 import PetUpdatesFeed from '../../components/PetUpdatesFeed';
 import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
+import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 
 const STATUS_STYLES = {
   pending:   'bg-[#fff1cf] text-[#8d5c0b] border border-[#f0d27d]',
@@ -41,6 +42,7 @@ export default function Bookings() {
   const [rebookBooking, setRebookBooking] = useState(null);
   const [rebookForm, setRebookForm] = useState({ start_date: '', end_date: '', start_time: '', end_time: '' });
   const [rebookMessage, setRebookMessage] = useState('');
+  const [statusError, setStatusError] = useState('');
   const t = {
     en: {
       all: 'All', pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
@@ -158,7 +160,12 @@ export default function Bookings() {
   async function reload() { setData(await api.get('/api/bookings/mine')); }
 
   async function changeStatus(id, status) {
-    await api.put(`/api/bookings/${id}/status`, { status });
+    setStatusError('');
+    try {
+      await api.put(`/api/bookings/${id}/status`, { status });
+    } catch (err) {
+      setStatusError(err.message);
+    }
     reload();
   }
 
@@ -184,6 +191,23 @@ export default function Bookings() {
 
   async function submitRebook() {
     if (!rebookBooking) return;
+    const today = todayInAppTimeZone();
+    if (!rebookForm.start_date || !rebookForm.end_date) {
+      setRebookMessage('Choose start and end dates.');
+      return;
+    }
+    if (rebookForm.start_date < today || rebookForm.end_date < today) {
+      setRebookMessage('You cannot book a date in the past.');
+      return;
+    }
+    if (rebookForm.start_date > rebookForm.end_date) {
+      setRebookMessage('End date must be the same day or later than the start date.');
+      return;
+    }
+    if (rebookForm.start_date === today && rebookForm.start_time && rebookForm.start_time <= nowTimeInAppTimeZone()) {
+      setRebookMessage('This start time has already passed today. Choose a later time.');
+      return;
+    }
     try {
       await api.post(`/api/bookings/${rebookBooking.id}/rebook`, rebookForm);
       setRebookMessage(t.bookingRepeated || 'Booking repeated successfully.');
@@ -373,6 +397,10 @@ export default function Bookings() {
         ))}
       </div>
 
+      {statusError && (
+        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{statusError}</div>
+      )}
+
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-nanny-deepOrange">{t.asOwner || 'As owner'}</h2>
@@ -463,8 +491,8 @@ export default function Bookings() {
               <button className="btn-ghost" onClick={() => setRebookBooking(null)}>{t.close || 'Close'}</button>
             </div>
             <div className="mt-5 grid gap-3 rounded-2xl bg-nanny-cream/45 p-5 md:grid-cols-2">
-              <input className="input" type="date" value={rebookForm.start_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, start_date: e.target.value }))} />
-              <input className="input" type="date" value={rebookForm.end_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, end_date: e.target.value }))} />
+              <input className="input" type="date" min={todayInAppTimeZone()} value={rebookForm.start_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, start_date: e.target.value }))} />
+              <input className="input" type="date" min={rebookForm.start_date || todayInAppTimeZone()} value={rebookForm.end_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, end_date: e.target.value }))} />
               <input className="input" type="time" value={rebookForm.start_time} onChange={(e) => setRebookForm((prev) => ({ ...prev, start_time: e.target.value }))} />
               <input className="input" type="time" value={rebookForm.end_time} onChange={(e) => setRebookForm((prev) => ({ ...prev, end_time: e.target.value }))} />
               {rebookMessage && (

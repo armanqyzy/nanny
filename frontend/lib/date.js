@@ -61,3 +61,23 @@ export function getWeekdayLabels(language = 'en') {
     formatDate(new Date(Date.UTC(2024, 0, 7 + index)), language, { weekday: 'short' })
   ));
 }
+
+// Today's date in the app time zone as YYYY-MM-DD (used as the min value for date inputs).
+export function todayInAppTimeZone(value = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(toDate(value));
+}
+
+// Current time in the app time zone as HH:MM.
+export function nowTimeInAppTimeZone(value = new Date()) {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(toDate(value));
+}

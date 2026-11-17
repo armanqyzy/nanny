@@ -5,7 +5,6 @@ import { absoluteAssetUrl, api, currentUser, uploadFile } from '../../lib/api';
 import Icon from '../../components/Icon';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useLanguage } from '../../lib/i18n';
-import { formatDateTime } from '../../lib/date';
 
 const EMPTY = {
   name: '', pet_type: 'dog', gender: 'boy', age: '',
@@ -70,53 +69,6 @@ export default function Pets() {
     en: { petProfiles:'Pet profiles', petProfilesText:'Keep each pet card updated with care and health details.', healthNotes:'Health notes', healthNotesText:'Visible reminders for medicines, allergies and vaccinations.', quickAction:'Quick action', quickTitle:'Pet care stays clearer', quickText:'Photos from the media library, health reminders and behavior notes help sitters prepare faster.', noNotes:'No notes yet.', behavior:'Behavior:', health:'Health:', notSpecified:'Not specified', noHealth:'No health notes', edit:'Edit', delete:'Delete', addAnother:'Add another pet', createFirst:'Create first pet profile', addCardText:'Create a profile with photo, health notes and care preferences.', editor:'Pet profile editor', newProfile:'New pet profile', editTitle:'Edit pet profile', addPet:'Add my pet', addPetText:'Add the details a sitter needs before the first walk, stay or update.', close:'Close', profileCompletion:'Profile completion', completionText:'Photos, health details and behavior notes help sitters prepare faster.', general:'General information', generalText:'Start with the basics so bookings and recommendations stay accurate.', required:'Required', petType:'Pet type', gender:'Gender', age:'Age (years)', size:'Size', careLevel:'Care level', photoSection:'Photo from media library', photoText:'A real photo helps sitters recognize your pet right away.', replacePhoto:'Replace pet photo', choosePhoto:'Choose photo from media library', photoHint:'JPG, PNG or WEBP up to 5 MB. Clean, well-lit photos work best.', uploadPhoto:'Upload photo', selectedPhoto:'Photo selected from media library', previewPlaceholder:'Preview placeholder until you upload a photo', remove:'Remove', sitterNotes:'Care notes for sitters', sitterNotesText:'Describe temperament, health and any routines that matter during a booking.', aiWriting:'AI is writing...', improveAi:'Improve with AI', extraNotes:'Extra notes', livePreview:'Live preview', yourPetName:'Your pet name', defaultPreview:'Add a short sitter-facing note so care feels easier from the first booking.', addTemperament:'Add temperament notes', addHealth:'Add health notes', strongProfile:'What makes a strong pet profile', guide1:'Clear photo from your media library', guide2:'Real behavior notes, not just “good dog”', guide3:'Medication, allergies and feeding reminders', guide4:'Short sitter-facing description with routines', cancel:'Cancel', saveChanges:'Save changes', createProfile:'Create pet profile', deleteTitle:'Delete this pet profile?', deleteConfirm:'Delete pet', keepProfile:'Keep profile', customTypePlaceholder:'What kind of animal is it? Example: rabbit, hamster, turtle' },
     ru: { petProfiles:'Профили питомцев', petProfilesText:'Поддерживайте каждую карточку питомца актуальной по уходу и здоровью.', healthNotes:'Заметки о здоровье', healthNotesText:'Видимые напоминания о лекарствах, аллергиях и вакцинации.', quickAction:'Быстрое действие', quickTitle:'Уход за питомцем становится понятнее', quickText:'Фото из медиатеки, напоминания о здоровье и заметки о поведении помогают ситтерам подготовиться быстрее.', noNotes:'Пока нет заметок.', behavior:'Поведение:', health:'Здоровье:', notSpecified:'Не указано', noHealth:'Нет заметок о здоровье', edit:'Изменить', delete:'Удалить', addAnother:'Добавить ещё питомца', createFirst:'Создать первый профиль питомца', addCardText:'Создайте профиль с фото, заметками о здоровье и предпочтениями по уходу.', editor:'Редактор профиля питомца', newProfile:'Новый профиль питомца', editTitle:'Редактировать профиль питомца', addPet:'Добавить питомца', addPetText:'Добавьте детали, которые нужны ситтеру до первой прогулки, передержки или обновления.', close:'Закрыть', profileCompletion:'Заполнение профиля', completionText:'Фото, данные о здоровье и заметки о поведении помогают ситтерам подготовиться быстрее.', general:'Основная информация', generalText:'Начните с базы, чтобы бронирования и рекомендации были точнее.', required:'Обязательно', petType:'Тип питомца', gender:'Пол', age:'Возраст (лет)', size:'Размер', careLevel:'Уровень ухода', photoSection:'Фото из медиатеки', photoText:'Настоящее фото помогает ситтерам сразу узнать вашего питомца.', replacePhoto:'Заменить фото питомца', choosePhoto:'Выбрать фото из медиатеки', photoHint:'JPG, PNG или WEBP до 5 МБ. Лучше всего подходят чистые и хорошо освещённые фото.', uploadPhoto:'Загрузить фото', selectedPhoto:'Фото выбрано из медиатеки', previewPlaceholder:'Временный превью-блок до загрузки фото', remove:'Убрать', sitterNotes:'Заметки для ситтеров', sitterNotesText:'Опишите характер, здоровье и важные рутины, которые влияют на бронирование.', aiWriting:'ИИ пишет...', improveAi:'Улучшить с ИИ', extraNotes:'Дополнительные заметки', livePreview:'Живой превью', yourPetName:'Имя питомца', defaultPreview:'Добавьте короткую заметку для ситтера, чтобы уход был понятнее с первого бронирования.', addTemperament:'Добавьте заметки о характере', addHealth:'Добавьте заметки о здоровье', strongProfile:'Что делает профиль питомца сильным', guide1:'Чёткое фото из вашей медиатеки', guide2:'Реальные заметки о поведении, а не просто “хорошая собака”', guide3:'Напоминания о лекарствах, аллергиях и кормлении', guide4:'Короткое описание для ситтера с рутинами', cancel:'Отмена', saveChanges:'Сохранить изменения', createProfile:'Создать профиль питомца', deleteTitle:'Удалить этот профиль питомца?', deleteConfirm:'Удалить питомца', keepProfile:'Оставить профиль', customTypePlaceholder:'Что это за животное? Например: кролик, хомяк, черепаха' },
     kz: { petProfiles:'Үй жануары профильдері', petProfilesText:'Әр жануар картасын күтім және денсаулық мәліметтерімен жаңартып отырыңыз.', healthNotes:'Денсаулық жазбалары', healthNotesText:'Дәрілер, аллергия және вакцинация туралы көрінетін еске салғыштар.', quickAction:'Жылдам әрекет', quickTitle:'Жануар күтімі анығырақ болады', quickText:'Медиатекадағы фото, денсаулық еске салғыштары және мінез-құлық жазбалары ситтерлерге тезірек дайындалуға көмектеседі.', noNotes:'Әзірге жазба жоқ.', behavior:'Мінезі:', health:'Денсаулық:', notSpecified:'Көрсетілмеген', noHealth:'Денсаулық жазбасы жоқ', edit:'Өңдеу', delete:'Жою', addAnother:'Тағы бір жануар қосу', createFirst:'Алғашқы жануар профилін жасау', addCardText:'Фото, денсаулық жазбалары және күтім таңдаулары бар профиль жасаңыз.', editor:'Жануар профилін өңдеу', newProfile:'Жаңа жануар профилі', editTitle:'Жануар профилін өңдеу', addPet:'Жануарымды қосу', addPetText:'Алғашқы серуен, уақытша күту немесе жаңарту алдында ситтерге қажет деректерді қосыңыз.', close:'Жабу', profileCompletion:'Профильдің толуы', completionText:'Фото, денсаулық деректері және мінез-құлық жазбалары ситтерлерге тезірек дайындалуға көмектеседі.', general:'Жалпы ақпарат', generalText:'Бронь мен ұсынымдар дәлірек болу үшін негізден бастаңыз.', required:'Міндетті', petType:'Жануар түрі', gender:'Жынысы', age:'Жасы (жыл)', size:'Өлшемі', careLevel:'Күтім деңгейі', photoSection:'Медиатекадан фото', photoText:'Нақты фото ситтерге жануарыңызды бірден тануға көмектеседі.', replacePhoto:'Жануар фотосын ауыстыру', choosePhoto:'Медиатекадан фото таңдау', photoHint:'JPG, PNG немесе WEBP, 5 МБ-қа дейін. Жарық әрі таза фото жақсырақ.', uploadPhoto:'Фото жүктеу', selectedPhoto:'Фото медиатекадан таңдалды', previewPlaceholder:'Фото жүктегенге дейінгі алдын ала көрініс', remove:'Алу', sitterNotes:'Ситтерге арналған жазбалар', sitterNotesText:'Мінезді, денсаулықты және бронь кезінде маңызды болатын әдеттерді сипаттаңыз.', aiWriting:'ИИ жазып жатыр...', improveAi:'ИИ арқылы жақсарту', extraNotes:'Қосымша жазбалар', livePreview:'Тірі алдын ала қарау', yourPetName:'Жануар аты', defaultPreview:'Алғашқы броньдан бастап күтім оңай болу үшін ситтерге қысқа жазба қосыңыз.', addTemperament:'Мінез-құлық жазбаларын қосыңыз', addHealth:'Денсаулық жазбаларын қосыңыз', strongProfile:'Күшті жануар профилін не құрайды', guide1:'Медиатекадан анық фото', guide2:'“Жақсы ит” емес, нақты мінез жазбалары', guide3:'Дәрі, аллергия және тамақтандыру еске салғыштары', guide4:'Ситтерге арналған қысқа сипаттама мен рутиналар', cancel:'Болдырмау', saveChanges:'Өзгерістерді сақтау', createProfile:'Жануар профилін жасау', deleteTitle:'Осы жануар профилін жою керек пе?', deleteConfirm:'Жануарды жою', keepProfile:'Профильді сақтау', customTypePlaceholder:'Бұл қандай жануар? Мысалы: қоян, хомяк, тасбақа' },
-  }[language] || {};
-  const dbCopy = {
-    en: {
-      title: 'Database-backed CRUD',
-      text: 'Every pet profile here is read from and written to the Docker PostgreSQL database. Create, edit and delete actions update these rows.',
-      rows: 'rows in pets table',
-      record: 'PostgreSQL record',
-      ownerId: 'Owner ID',
-      createdAt: 'Created at',
-      updatedAt: 'Updated at',
-      notUpdated: 'Not updated yet',
-      snapshot: 'Live database snapshot',
-      snapshotText: 'These are the exact pet rows currently returned by the API for your account.',
-      noRows: 'No pet rows yet. Create one and it will appear here immediately.',
-      name: 'Name',
-      petType: 'Pet type',
-    },
-    ru: {
-      title: 'CRUD с реальной базой данных',
-      text: 'Каждый профиль питомца здесь читается из Docker PostgreSQL и записывается туда же. Создание, редактирование и удаление сразу меняют эти строки.',
-      rows: 'строк в таблице pets',
-      record: 'Запись PostgreSQL',
-      ownerId: 'ID владельца',
-      createdAt: 'Создано',
-      updatedAt: 'Обновлено',
-      notUpdated: 'Пока не обновлялось',
-      snapshot: 'Живой снимок базы',
-      snapshotText: 'Это те же строки питомцев, которые сейчас вернул API для вашего аккаунта.',
-      noRows: 'Записей о питомцах пока нет. Создай питомца, и строка сразу появится здесь.',
-      name: 'Имя',
-      petType: 'Тип питомца',
-    },
-    kz: {
-      title: 'Нақты дерекқормен CRUD',
-      text: 'Әр жануар профилі Docker PostgreSQL дерекқорынан оқылады және сол жерге жазылады. Қосу, өзгерту және жою осы жолдарды бірден жаңартады.',
-      rows: 'pets кестесіндегі жолдар',
-      record: 'PostgreSQL жазбасы',
-      ownerId: 'Иесінің ID-і',
-      createdAt: 'Құрылған уақыты',
-      updatedAt: 'Жаңартылған уақыты',
-      notUpdated: 'Әлі жаңартылған жоқ',
-      snapshot: 'Дерекқордың тірі көрінісі',
-      snapshotText: 'Бұл дәл қазір API сенің аккаунтың үшін қайтарған жануар жолдары.',
-      noRows: 'Әзірге жануар жазбалары жоқ. Жаңасын қоссан, ол бірден осында шығады.',
-      name: 'Аты',
-      petType: 'Жануар түрі',
-    },
   }[language] || {};
 
   useEffect(() => {
@@ -319,24 +271,10 @@ export default function Pets() {
         </div>
       </section>
 
-      <section className="mb-6 rounded-[32px] border border-nanny-blue/15 bg-gradient-to-r from-[#f6f8ff] to-white px-6 py-5 shadow-card">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs uppercase tracking-[0.18em] text-nanny-blue/70">{dbCopy.title || 'Database-backed CRUD'}</p>
-            <p className="mt-2 text-sm leading-6 text-nanny-brownish/75">
-              {dbCopy.text || 'Every pet profile here is read from and written to the Docker PostgreSQL database. Create, edit and delete actions update these rows.'}
-            </p>
-          </div>
-          <span className="rounded-full border border-nanny-blue/15 bg-white px-4 py-2 text-sm font-semibold text-nanny-blue">
-            {pets.length} {dbCopy.rows || 'rows in pets table'}
-          </span>
-        </div>
-      </section>
-
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {pets.map((p) => (
           <div key={p.id} className="card p-0 overflow-hidden">
-            <img src={(p.photo_url && absoluteAssetUrl(p.photo_url)) || 'https://placedog.net/400/300'} alt={p.name}
+            <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }} src={(p.photo_url && absoluteAssetUrl(p.photo_url)) || '/pet-placeholder.png'} alt={p.name}
                  className="w-full h-40 object-cover" />
             <div className="p-4">
               <div className="flex items-start justify-between gap-3">
@@ -352,17 +290,6 @@ export default function Pets() {
               <div className="mt-4 space-y-2 text-xs text-nanny-brownish/70">
                 <p><span className="font-semibold text-nanny-brownish">{t.behavior || 'Behavior:'}</span> {p.behavior || (t.notSpecified || 'Not specified')}</p>
                 <p><span className="font-semibold text-nanny-brownish">{t.health || 'Health:'}</span> {p.health || (t.noHealth || 'No health notes')}</p>
-              </div>
-              <div className="mt-4 rounded-2xl border border-nanny-blue/12 bg-[#f7f9ff] p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-nanny-blue/70">
-                  {dbCopy.record || 'PostgreSQL record'}
-                </p>
-                <div className="mt-2 space-y-1.5 text-xs text-nanny-brownish/75">
-                  <p><span className="font-semibold text-nanny-brownish">ID:</span> #{p.id}</p>
-                  <p><span className="font-semibold text-nanny-brownish">{dbCopy.ownerId || 'Owner ID'}:</span> {p.owner_id}</p>
-                  <p><span className="font-semibold text-nanny-brownish">{dbCopy.createdAt || 'Created at'}:</span> {formatDateTime(p.created_at, language)}</p>
-                  <p><span className="font-semibold text-nanny-brownish">{dbCopy.updatedAt || 'Updated at'}:</span> {p.updated_at ? formatDateTime(p.updated_at, language) : (dbCopy.notUpdated || 'Not updated yet')}</p>
-                </div>
               </div>
               <div className="mt-4 flex gap-2">
                 <button onClick={() => editPet(p)} className="btn-ghost text-sm">{t.edit || 'Edit'}</button>
@@ -383,54 +310,6 @@ export default function Pets() {
         </button>
       </div>
 
-      <section className="mt-8 overflow-hidden rounded-[32px] border border-nanny-blue/12 bg-white shadow-card">
-        <div className="border-b border-nanny-blue/10 bg-gradient-to-r from-white to-[#f7f9ff] px-6 py-5">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-nanny-blue/70">{dbCopy.snapshot || 'Live database snapshot'}</p>
-              <p className="mt-2 text-sm text-nanny-brownish/70">
-                {dbCopy.snapshotText || 'These are the exact pet rows currently returned by the API for your account.'}
-              </p>
-            </div>
-            <span className="badge bg-nanny-yellow/70 text-nanny-brownish">{pets.length} {dbCopy.rows || 'rows in pets table'}</span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto px-6 py-5">
-          {pets.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-nanny-orange/18 bg-[#fffaf4] p-5 text-sm leading-6 text-nanny-brownish/70">
-              {dbCopy.noRows || 'No pet rows yet. Create one and it will appear here immediately.'}
-            </div>
-          ) : (
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.16em] text-nanny-brownish/50">
-                <tr>
-                  <th className="pb-3 pr-4">ID</th>
-                  <th className="pb-3 pr-4">{dbCopy.name || 'Name'}</th>
-                  <th className="pb-3 pr-4">{dbCopy.petType || 'Pet type'}</th>
-                  <th className="pb-3 pr-4">{dbCopy.ownerId || 'Owner ID'}</th>
-                  <th className="pb-3 pr-4">{dbCopy.createdAt || 'Created at'}</th>
-                  <th className="pb-3">{dbCopy.updatedAt || 'Updated at'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pets.map((pet) => (
-                  <tr key={`db-row-${pet.id}`} className="border-t border-nanny-orange/10 text-nanny-brownish">
-                    <td className="py-3 pr-4 font-semibold">#{pet.id}</td>
-                    <td className="py-3 pr-4">{pet.name}</td>
-                    <td className="py-3 pr-4 capitalize">{pet.pet_type}</td>
-                    <td className="py-3 pr-4">{pet.owner_id}</td>
-                    <td className="py-3 pr-4 whitespace-nowrap">{formatDateTime(pet.created_at, language)}</td>
-                    <td className="py-3 whitespace-nowrap">
-                      {pet.updated_at ? formatDateTime(pet.updated_at, language) : (dbCopy.notUpdated || 'Not updated yet')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
 
       {adding && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
@@ -636,8 +515,8 @@ export default function Pets() {
                       </label>
 
                       <div className="rounded-3xl border border-nanny-orange/15 bg-nanny-cream/35 p-3">
-                        <img
-                          src={(form.photo_url && absoluteAssetUrl(form.photo_url)) || 'https://placedog.net/600/400'}
+                        <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }}
+                          src={(form.photo_url && absoluteAssetUrl(form.photo_url)) || '/pet-placeholder.png'}
                           alt={form.name || 'Pet preview'}
                           className="h-[220px] w-full rounded-2xl object-cover"
                         />
@@ -713,8 +592,8 @@ export default function Pets() {
               <aside className="max-h-[92vh] overflow-y-auto border-t lg:border-t-0 lg:border-l border-nanny-orange/10 bg-gradient-to-b from-[#fff8ef] to-white p-6 lg:p-7">
                 <p className="text-xs uppercase tracking-[0.22em] opacity-55">{t.livePreview || 'Live preview'}</p>
                 <div className="mt-4 overflow-hidden rounded-[28px] border border-nanny-orange/15 bg-white shadow-card">
-                  <img
-                    src={(form.photo_url && absoluteAssetUrl(form.photo_url)) || 'https://placedog.net/600/420'}
+                  <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }}
+                    src={(form.photo_url && absoluteAssetUrl(form.photo_url)) || '/pet-placeholder.png'}
                     alt={form.name || 'Preview'}
                     className="h-56 w-full object-cover"
                   />

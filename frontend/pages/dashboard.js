@@ -1098,7 +1098,7 @@ export default function Dashboard() {
         <div className="mt-4 grid sm:grid-cols-2 md:grid-cols-3 gap-4">
           {pets.map((p) => (
             <div key={p.id} className="border border-nanny-orange/20 rounded-xl overflow-hidden bg-white">
-              <img src={p.photo_url || 'https://placedog.net/400/300'} alt={p.name}
+              <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }} src={(p.photo_url && absoluteAssetUrl(p.photo_url)) || '/pet-placeholder.png'} alt={p.name}
                    className="w-full h-32 object-cover" />
               <div className="p-3">
                 <div className="font-bold">{p.name}</div>
@@ -1152,8 +1152,8 @@ export default function Dashboard() {
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {recommendations.map((sitter) => (
             <article key={sitter.id} className="rounded-2xl border border-nanny-orange/20 bg-white p-4">
-              <img
-                src={sitter.avatar_url || 'https://placedog.net/400/260'}
+              <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }}
+                src={(sitter.avatar_url && absoluteAssetUrl(sitter.avatar_url)) || '/pet-placeholder.png'}
                 alt={sitter.full_name}
                 className="h-36 w-full rounded-2xl object-cover"
               />
@@ -1199,7 +1199,7 @@ export default function Dashboard() {
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {favorites.map((sitter) => (
             <article key={sitter.id} className="rounded-2xl border border-nanny-orange/20 bg-white p-4">
-              <img src={sitter.avatar_url || 'https://placedog.net/400/260'} alt={sitter.full_name} className="h-36 w-full rounded-2xl object-cover" />
+              <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }} src={(sitter.avatar_url && absoluteAssetUrl(sitter.avatar_url)) || '/pet-placeholder.png'} alt={sitter.full_name} className="h-36 w-full rounded-2xl object-cover" />
               <div className="mt-3">
                 <div className="font-bold">{sitter.full_name}</div>
                 <div className="mt-1 text-sm opacity-70">{sitter.city}, {sitter.district}</div>

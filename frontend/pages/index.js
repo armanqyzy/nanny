@@ -408,7 +408,7 @@ export default function Home() {
             <div className="absolute -left-8 top-8 h-40 w-40 rounded-full bg-nanny-orange/25 blur-3xl float-slow" />
             <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-nanny-blue/12 blur-3xl float-slow" />
             <div className="pulse-glow relative overflow-hidden rounded-[36px] border border-white/70 bg-white p-4 shadow-[0_30px_80px_rgba(130,93,47,0.18)]">
-              <img
+              <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }}
                 src="https://images.unsplash.com/photo-1517849845537-4d257902454a?w=1400&auto=format&fit=crop"
                 alt="Happy dog with sitter"
                 className="h-[420px] w-full rounded-[28px] object-cover"

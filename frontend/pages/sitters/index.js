@@ -5,7 +5,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Icon from '../../components/Icon';
 import SittersMapExplorer from '../../components/SittersMapExplorer';
-import { api, currentUser } from '../../lib/api';
+import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { buildSitterRouteQuery, parseMapStateFromQuery } from '../../lib/sitterMapState';
 
@@ -336,7 +336,7 @@ export default function SittersList() {
               {compareSitters.map((sitter) => (
                 <article key={sitter.id} className="rounded-2xl border border-nanny-orange/15 bg-nanny-cream/35 p-4">
                   <div className="flex items-center gap-3">
-                    <img src={sitter.avatar_url || 'https://placedog.net/120/120'} alt={sitter.full_name} className="h-14 w-14 rounded-full object-cover" />
+                    <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }} src={(sitter.avatar_url && absoluteAssetUrl(sitter.avatar_url)) || '/pet-placeholder.png'} alt={sitter.full_name} className="h-14 w-14 rounded-full object-cover" />
                     <div>
                       <p className="font-bold">{sitter.full_name}</p>
                       <p className="text-xs opacity-70">{sitter.city}, {sitter.district}</p>
@@ -363,7 +363,7 @@ export default function SittersList() {
               <Link key={s.id} href={`/sitters/${s.id}`} className="card surface-soft">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                  <img src={s.avatar_url || 'https://placedog.net/120/120'} alt={s.full_name}
+                  <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }} src={(s.avatar_url && absoluteAssetUrl(s.avatar_url)) || '/pet-placeholder.png'} alt={s.full_name}
                        className="w-16 h-16 rounded-full object-cover" />
                   <div>
                     <div className="font-bold">{s.full_name}</div>

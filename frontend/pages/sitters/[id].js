@@ -3,8 +3,11 @@ import { useRouter } from 'next/router';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Icon from '../../components/Icon';
-import { api, currentUser } from '../../lib/api';
+import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
+import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
+
+const EMPTY_BOOKING = { pet_id: '', service: 'walking', start_date: '', end_date: '', start_time: '', end_time: '', notes: '' };
 
 export default function SitterPage() {
   const { language } = useLanguage();
@@ -12,7 +15,7 @@ export default function SitterPage() {
   const { id } = router.query;
   const [sitter, setSitter] = useState(null);
   const [pets, setPets] = useState([]);
-  const [book, setBook] = useState({ pet_id: '', service: 'walking', start_date: '', end_date: '', start_time: '', end_time: '', notes: '' });
+  const [book, setBook] = useState(EMPTY_BOOKING);
   const [msg, setMsg] = useState(null);
   const [availability, setAvailability] = useState(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
@@ -131,6 +134,12 @@ export default function SitterPage() {
     if (!book.service) nextErrors.service = 'Choose the service you want to book.';
     if (!book.start_date) nextErrors.start_date = 'Choose the first care day.';
     if (!book.end_date) nextErrors.end_date = 'Choose the last care day.';
+    const today = todayInAppTimeZone();
+    if (book.start_date && book.start_date < today) nextErrors.start_date = 'You cannot book a date in the past.';
+    if (book.end_date && book.end_date < today) nextErrors.end_date = 'You cannot book a date in the past.';
+    if (book.start_date === today && book.start_time && book.start_time <= nowTimeInAppTimeZone()) {
+      nextErrors.time = 'This start time has already passed today. Choose a later time.';
+    }
     if (book.start_date && book.end_date && book.start_date > book.end_date) nextErrors.end_date = 'End date must be the same day or later than the start date.';
     if ((book.start_time && !book.end_time) || (!book.start_time && book.end_time)) {
       nextErrors.time = 'Choose both start and end time, or leave both empty.';
@@ -151,9 +160,13 @@ export default function SitterPage() {
     setFieldErrors({});
     try {
       await api.post('/api/bookings', { sitter_id: Number(id), ...book, pet_id: Number(book.pet_id) });
+      // Reset the form so the same booking is not submitted twice by accident.
+      setBook({ ...EMPTY_BOOKING, service: sitter?.services?.[0]?.service || EMPTY_BOOKING.service });
+      setAvailability(null);
+      setFieldErrors({});
       setMsg({ type: 'ok', text: 'Booking created! Check your bookings page.' });
     } catch (e) {
-      setMsg({ type: 'err', text: 'We could not create the booking yet. Please review the selected dates, times and required fields.' });
+      setMsg({ type: 'err', text: e?.message || 'We could not create the booking yet. Please review the selected dates, times and required fields.' });
     }
   }
 
@@ -188,7 +201,7 @@ export default function SitterPage() {
       <Navbar />
       <main className="max-w-5xl mx-auto px-6 py-10">
         <div className="card flex flex-col md:flex-row gap-6 items-start">
-          <img src={sitter.avatar_url || 'https://placedog.net/240/240'} alt={sitter.full_name}
+          <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }} src={(sitter.avatar_url && absoluteAssetUrl(sitter.avatar_url)) || '/pet-placeholder.png'} alt={sitter.full_name}
                className="w-40 h-40 rounded-2xl object-cover" />
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
@@ -337,7 +350,7 @@ export default function SitterPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.startDate || 'Start date'}</label>
                 <p className="mb-2 text-xs opacity-65">{t.firstCareDay || 'The first day the sitter should begin care.'}</p>
-                <input className={`input ${fieldErrors.start_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.start_date}
+                <input className={`input ${fieldErrors.start_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.start_date} min={todayInAppTimeZone()}
                        onChange={(e) => {
                          setBook({ ...book, start_date: e.target.value });
                          clearFieldError('start_date');
@@ -348,7 +361,7 @@ export default function SitterPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.endDate || 'End date'}</label>
                 <p className="mb-2 text-xs opacity-65">{t.lastCareDay || 'The last day included in this booking.'}</p>
-                <input className={`input ${fieldErrors.end_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.end_date}
+                <input className={`input ${fieldErrors.end_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.end_date} min={book.start_date || todayInAppTimeZone()}
                        onChange={(e) => {
                          setBook({ ...book, end_date: e.target.value });
                          clearFieldError('end_date');

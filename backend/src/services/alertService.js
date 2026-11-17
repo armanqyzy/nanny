@@ -87,8 +87,22 @@ async function notifyUser(
   return notification;
 }
 
+// DATE columns come back from pg as Date objects (local midnight) and TIME as 'HH:MM:SS',
+// so normalise both before building the reminder timestamp.
+function toDateString(value) {
+  if (value instanceof Date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+function toTimeString(value) {
+  return value ? String(value).slice(0, 5) : '09:00';
+}
+
 function buildReminderDueAt(startDate, startTime) {
-  const base = new Date(`${startDate}T${startTime || '09:00'}:00+05:00`);
+  const base = new Date(`${toDateString(startDate)}T${toTimeString(startTime)}:00+05:00`);
   base.setHours(base.getHours() - 2);
   return base.toISOString();
 }
@@ -118,7 +132,7 @@ async function queueBookingReminder({
 
   const dueAt = buildReminderDueAt(startDate, startTime);
   const title = 'Upcoming pet care reminder';
-  const body = `${petName} has ${service} scheduled on ${startDate}${startTime ? ` at ${String(startTime).slice(0, 5)}` : ''}.`;
+  const body = `${petName} has ${service} scheduled on ${toDateString(startDate)}${startTime ? ` at ${toTimeString(startTime)}` : ''}.`;
 
   const jobs = [];
   if (contact.email) {

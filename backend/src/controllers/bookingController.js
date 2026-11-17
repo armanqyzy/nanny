@@ -6,6 +6,40 @@ function overlapsTime(startA, endA, startB, endB) {
   return startA < endB && endA > startB;
 }
 
+const APP_TIME_ZONE = 'Asia/Almaty';
+
+function todayInAppTimeZone() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+}
+
+function nowTimeInAppTimeZone() {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TIME_ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(new Date());
+}
+
+function toDateString(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: APP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(value);
+  }
+  return String(value).slice(0, 10);
+}
+
+// Returns an error message if the booking starts in the past, otherwise null.
+function pastDateError(startDate, startTime) {
+  const today = todayInAppTimeZone();
+  if (toDateString(startDate) < today) return 'You cannot book a date in the past.';
+  if (toDateString(startDate) === today && startTime && String(startTime).slice(0, 5) <= nowTimeInAppTimeZone()) {
+    return 'This start time has already passed today. Choose a later time.';
+  }
+  return null;
+}
+
 async function findBookingConflicts({ sitterId, startDate, endDate, startTime, endTime, excludeBookingId = null }) {
   const params = [sitterId, startDate, endDate];
   let sql = `
@@ -43,6 +77,9 @@ async function create(req, res) {
   if (start_time && end_time && start_time >= end_time) {
     return res.status(400).json({ error: 'end_time must be later than start_time' });
   }
+
+  const pastError = pastDateError(start_date, start_time);
+  if (pastError) return res.status(400).json({ error: pastError });
 
   const { rows: petRows } = await db.query(
     'SELECT id, owner_id FROM pets WHERE id = $1',
@@ -185,6 +222,27 @@ async function updateStatus(req, res) {
     return res.status(400).json({ error: `You cannot change booking from ${booking.status} to ${status}` });
   }
 
+  if (status === 'confirmed') {
+    if (toDateString(booking.end_date) < todayInAppTimeZone()) {
+      return res.status(400).json({ error: 'This booking is already in the past and cannot be confirmed.' });
+    }
+    const conflicts = await findBookingConflicts({
+      sitterId: booking.sitter_id,
+      startDate: toDateString(booking.start_date),
+      endDate: toDateString(booking.end_date),
+      startTime: booking.start_time || null,
+      endTime: booking.end_time || null,
+      excludeBookingId: booking.id,
+    });
+    if (conflicts.length) {
+      return res.status(409).json({ error: 'You already have a confirmed booking at this time. Cancel or finish it first.' });
+    }
+  }
+
+  if (status === 'completed' && toDateString(booking.start_date) > todayInAppTimeZone()) {
+    return res.status(400).json({ error: 'A booking cannot be completed before it starts.' });
+  }
+
   const { rows } = await db.query(
     `UPDATE bookings
         SET status = $1
@@ -272,6 +330,9 @@ async function rebook(req, res) {
   if (effectiveStartTime && effectiveEndTime && effectiveStartTime >= effectiveEndTime) {
     return res.status(400).json({ error: 'end_time must be later than start_time' });
   }
+
+  const rebookPastError = pastDateError(start_date, effectiveStartTime);
+  if (rebookPastError) return res.status(400).json({ error: rebookPastError });
 
   const conflicts = await findBookingConflicts({
     sitterId: original.sitter_id,

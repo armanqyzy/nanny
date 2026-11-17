@@ -38,8 +38,12 @@ CREATE TABLE users (
     emergency_contact_phone VARCHAR(40),
     emergency_contact_notes TEXT,
     is_blocked      BOOLEAN      NOT NULL DEFAULT FALSE,
+    reset_password_token      TEXT,
+    reset_password_expires_at TIMESTAMPTZ,
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX users_reset_password_token_idx ON users (reset_password_token);
 
 -- ------------------------------------------------------------
 -- Pets belong to an owner (user)
