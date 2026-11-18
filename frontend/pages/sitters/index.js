@@ -10,7 +10,7 @@ import { useLanguage } from '../../lib/i18n';
 import { buildSitterRouteQuery, parseMapStateFromQuery } from '../../lib/sitterMapState';
 import { formatRating } from '../../lib/rating';
 import EmptyState from '../../components/EmptyState';
-import { NumberInput } from '../../components/FancyInputs';
+import { NumberInput, SelectInput } from '../../components/FancyInputs';
 
 const INITIAL_FILTERS = {
   city: '',
@@ -286,14 +286,14 @@ export default function SittersList() {
                  value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} />
           <input className="input" placeholder={copy.city}
                  value={filters.city} onChange={(e) => setFilters({ ...filters, city: e.target.value })} />
-          <select className="input" value={filters.service}
+          <SelectInput className="input" value={filters.service}
                   onChange={(e) => setFilters({ ...filters, service: e.target.value })}>
             <option value="">{copy.anyService}</option>
             <option value="walking">{copy.walking}</option>
             <option value="boarding">{copy.boarding}</option>
             <option value="home_visit">{copy.homeVisit}</option>
             <option value="grooming">{copy.grooming}</option>
-          </select>
+          </SelectInput>
           <NumberInput className="input" step="0.1" placeholder={copy.minRating}
                  value={filters.min_rating}
                  onChange={(e) => setFilters({ ...filters, min_rating: e.target.value })} />

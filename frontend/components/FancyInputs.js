@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Children, Fragment, isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../lib/i18n';
 
@@ -423,6 +423,147 @@ export function TimeInput({ className = '', value, onChange, disabled, name, pla
               {L.done}
             </button>
           </div>
+        </div>
+      </Popover>
+    </div>
+  );
+}
+
+/* ---------------------------------- SELECT ---------------------------------- */
+
+function textOf(node) {
+  if (node === null || node === undefined || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join('');
+  if (isValidElement(node)) return textOf(node.props.children);
+  return '';
+}
+
+function collectOptions(children, out = []) {
+  Children.toArray(children).forEach((child) => {
+    if (!isValidElement(child)) return;
+    if (child.type === Fragment || child.type === 'optgroup') {
+      collectOptions(child.props.children, out);
+    } else if (child.type === 'option') {
+      const label = textOf(child.props.children);
+      const value = child.props.value !== undefined ? String(child.props.value) : label;
+      out.push({ value, label, disabled: !!child.props.disabled });
+    }
+  });
+  return out;
+}
+
+export function SelectInput({ className = '', value, onChange, disabled, name, children, placeholder }) {
+  const { wrapper, field } = splitClasses(className);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const anchorRef = useRef(null);
+  const popRef = useRef(null);
+  const listRef = useRef(null);
+  const pos = usePopover(open, setOpen, anchorRef, popRef);
+  const options = collectOptions(children);
+  const current = value === undefined || value === null ? '' : String(value);
+  const selectedIndex = options.findIndex((o) => o.value === current);
+  const selected = options[selectedIndex];
+  const [width, setWidth] = useState(220);
+
+  useEffect(() => {
+    if (!open) return;
+    setWidth(Math.max(180, anchorRef.current?.offsetWidth || 220));
+    setActive(selectedIndex >= 0 ? selectedIndex : 0);
+    requestAnimationFrame(() => {
+      const el = listRef.current?.querySelector('[data-selected="true"]');
+      if (el && listRef.current) listRef.current.scrollTop = el.offsetTop - 8;
+    });
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const choose = (opt) => {
+    if (!opt || opt.disabled) return;
+    if (opt.value !== current) fire(onChange, name, opt.value);
+    setOpen(false);
+    anchorRef.current?.focus();
+  };
+
+  const onKeyDown = (e) => {
+    if (disabled) return;
+    if (!open && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
+      e.preventDefault();
+      setOpen(true);
+      return;
+    }
+    if (!open) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const dir = e.key === 'ArrowDown' ? 1 : -1;
+      let i = active;
+      for (let n = 0; n < options.length; n += 1) {
+        i = (i + dir + options.length) % options.length;
+        if (!options[i].disabled) break;
+      }
+      setActive(i);
+      const el = listRef.current?.children[i];
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      choose(options[active]);
+    } else if (e.key === 'Tab') {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className={`relative ${wrapper}`}>
+      <button
+        ref={anchorRef}
+        type="button"
+        name={name}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={onKeyDown}
+        className={`${field} group relative w-full truncate pr-12 text-left disabled:cursor-not-allowed disabled:opacity-60 ${open ? 'border-nanny-blue ring-2 ring-nanny-blue/40' : ''}`}
+      >
+        <span className={selected && (selected.value !== '' || selected.label) ? '' : 'opacity-45'}>
+          {selected ? selected.label : (placeholder || '\u00A0')}
+        </span>
+        <span className={iconChip}>
+          <span className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+            <Chevron dir="down" className="h-4 w-4" />
+          </span>
+        </span>
+      </button>
+
+      <Popover open={open} pos={pos} popRef={popRef} width={width}>
+        <div ref={listRef} role="listbox" className="fancy-scroll -m-2 max-h-72 space-y-0.5 overflow-y-auto p-1">
+          {options.map((opt, i) => {
+            const isSel = opt.value === current;
+            return (
+              <button
+                key={`${opt.value}-${i}`}
+                type="button"
+                role="option"
+                aria-selected={isSel}
+                data-selected={isSel}
+                disabled={opt.disabled}
+                onMouseEnter={() => setActive(i)}
+                onClick={() => choose(opt)}
+                className={[
+                  'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition',
+                  isSel ? 'bg-[#fff1e2] font-semibold text-nanny-deepOrange'
+                    : opt.disabled ? 'cursor-not-allowed opacity-40'
+                      : i === active ? 'bg-[#fff7ee] text-nanny-deepOrange' : 'hover:bg-[#fff7ee]',
+                ].join(' ')}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSel && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
         </div>
       </Popover>
     </div>

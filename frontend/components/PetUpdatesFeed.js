@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { absoluteAssetUrl, api, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
+import { SelectInput } from './FancyInputs';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -225,13 +226,13 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
             <img src={absoluteAssetUrl(form.photo_url)} alt={t.previewAlt || 'Update preview'} className="h-40 w-full rounded-2xl object-cover" />
           )}
           <div className="flex flex-wrap gap-2">
-            <select
+            <SelectInput
               className="input max-w-xs"
               value={form.status_label}
               onChange={(e) => setForm((prev) => ({ ...prev, status_label: e.target.value }))}
             >
               {t.statusOptions?.map((option) => <option key={option}>{option}</option>)}
-            </select>
+            </SelectInput>
             <button type="button" className="btn-ghost text-sm" disabled={sending} onClick={() => sendUpdate('status')}>
               {t.sendStatus || 'Send status'}
             </button>

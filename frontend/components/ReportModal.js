@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
+import { SelectInput } from './FancyInputs';
 
 // Reasons map to support categories and priorities, so the admin queue sorts them correctly.
 const REASONS = [
@@ -55,9 +56,9 @@ export default function ReportModal({ targetName, bookingId = null, defaultReaso
         ) : (
           <>
             <label className="mt-4 block text-sm font-semibold">{t.reason}</label>
-            <select className="input mt-1" value={reason} onChange={(e) => setReason(e.target.value)}>
+            <SelectInput className="input mt-1" value={reason} onChange={(e) => setReason(e.target.value)}>
               {REASONS.map((item) => <option key={item.key} value={item.key}>{item[language] || item.en}</option>)}
-            </select>
+            </SelectInput>
             <textarea className="input mt-3 min-h-[110px]" placeholder={t.details} value={details} maxLength={3000}
                       onChange={(e) => setDetails(e.target.value)} />
             {error && <p className="mt-2 text-sm text-red-600">{error}</p>}

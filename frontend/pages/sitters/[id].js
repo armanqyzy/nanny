@@ -9,7 +9,7 @@ import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 import { petSummaryLine } from '../../lib/pets';
 import { serviceName } from '../../lib/services';
 import { aiDoneMessage, aiLabel, useAiEnabled } from '../../lib/ai';
-import { DateInput, TimeInput } from '../../components/FancyInputs';
+import { DateInput, SelectInput, TimeInput } from '../../components/FancyInputs';
 
 const SERVICE_HINTS = {
   en: {
@@ -524,9 +524,9 @@ export default function SitterPage() {
                   </div>
                   <label className="flex items-center gap-2 text-sm">
                     {L('For', 'В течение', 'Ұзақтығы')}
-                    <select className="input max-w-[110px]" value={book.repeat_weeks} onChange={(e) => setBook({ ...book, repeat_weeks: Number(e.target.value) })}>
+                    <SelectInput className="input max-w-[110px]" value={book.repeat_weeks} onChange={(e) => setBook({ ...book, repeat_weeks: Number(e.target.value) })}>
                       {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>{n}</option>)}
-                    </select>
+                    </SelectInput>
                     {L('weeks', 'нед.', 'апта')}
                     {repeatCount > 0 && <span className="opacity-70">• {L(`${repeatCount} visits`, `визитов: ${repeatCount}`, `${repeatCount} рет`)}</span>}
                   </label>

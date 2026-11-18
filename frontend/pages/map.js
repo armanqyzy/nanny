@@ -4,6 +4,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import SittersMapExplorer from '../components/SittersMapExplorer';
 import { useLanguage } from '../lib/i18n';
 import { buildSitterRouteQuery, parseMapStateFromQuery } from '../lib/sitterMapState';
+import { SelectInput } from '../components/FancyInputs';
 
 export default function SittersMapPage() {
   const { language } = useLanguage();
@@ -102,7 +103,7 @@ export default function SittersMapPage() {
         controlsSlot={(
           <label className="text-sm">
             <span className="mb-1 block font-semibold">{t.minRating || 'Minimum rating'}</span>
-            <select
+            <SelectInput
               className="input min-w-[160px]"
               value={filters.min_rating}
               onChange={(event) => setFilters((prev) => ({ ...prev, min_rating: event.target.value === '' ? '' : Number(event.target.value) }))}
@@ -112,7 +113,7 @@ export default function SittersMapPage() {
               <option value={3.5}>3.5+</option>
               <option value={4}>4.0+</option>
               <option value={4.5}>4.5+</option>
-            </select>
+            </SelectInput>
           </label>
         )}
       />

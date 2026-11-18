@@ -6,7 +6,7 @@ import { SHOP_ORDER_STATUSES, handleProductImageError } from '../../lib/shop';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useLanguage } from '../../lib/i18n';
 import AdminActionLog from '../../components/AdminActionLog';
-import { NumberInput } from '../../components/FancyInputs';
+import { NumberInput, SelectInput } from '../../components/FancyInputs';
 
 const REVIEW_STATUSES = ['new', 'in_review', 'approved', 'changes_requested', 'rejected'];
 
@@ -551,7 +551,7 @@ export default function Admin() {
                   )}
                 </div>
                 <div className="w-full max-w-md space-y-3">
-                  <select
+                  <SelectInput
                     className="input"
                     value={supportStatusDraft[ticket.id] || ticket.status}
                     onChange={(e) => setSupportStatusDraft((prev) => ({ ...prev, [ticket.id]: e.target.value }))}
@@ -559,7 +559,7 @@ export default function Admin() {
                     {['open', 'in_progress', 'resolved', 'closed'].map((status) => (
                       <option key={status} value={status}>{status}</option>
                     ))}
-                  </select>
+                  </SelectInput>
                   <textarea
                     className="input min-h-[112px]"
                     placeholder={language === 'ru' ? 'Заметка по решению для пользователя' : language === 'kz' ? 'Пайдаланушыға арналған шешім жазбасы' : 'Resolution note for the requester'}
@@ -658,7 +658,7 @@ export default function Admin() {
                   <h3 className="font-bold text-nanny-deepOrange">Application review</h3>
                   <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'В выбранном статусе заявок нет.' : language === 'kz' ? 'Таңдалған күйде өтінімдер жоқ.' : 'No applications in the selected status.'}</p>
                 </div>
-                <select
+                <SelectInput
                   className="input w-56"
                   value={reviewFilter}
                   onChange={(e) => setReviewFilter(e.target.value)}
@@ -666,7 +666,7 @@ export default function Admin() {
                   {REVIEW_STATUSES.map((status) => (
                     <option key={status} value={status}>{status}</option>
                   ))}
-                </select>
+                </SelectInput>
               </div>
             </div>
           ) : (
@@ -678,7 +678,7 @@ export default function Admin() {
                     <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'Выберите заявку ситтера для проверки перед одобрением.' : language === 'kz' ? 'Мақұлдау алдында тексеру үшін ситтер өтінімін таңдаңыз.' : 'Choose a sitter application to inspect before approval.'}</p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <select
+                    <SelectInput
                       className="input w-40"
                       value={reviewFilter}
                       onChange={(e) => setReviewFilter(e.target.value)}
@@ -686,7 +686,7 @@ export default function Admin() {
                       {REVIEW_STATUSES.map((status) => (
                         <option key={status} value={status}>{status}</option>
                       ))}
-                    </select>
+                    </SelectInput>
                     <input
                       className="input w-40"
                       placeholder={language === 'ru' ? 'Поиск' : language === 'kz' ? 'Іздеу' : 'Search'}
@@ -856,7 +856,7 @@ export default function Admin() {
                       <div className="card">
                         <h4 className="font-bold text-nanny-deepOrange">{language === 'ru' ? 'Детали проверки' : language === 'kz' ? 'Тексеру мәліметтері' : 'Admin review details'}</h4>
                         <div className="mt-3 space-y-3">
-                          <select
+                          <SelectInput
                             className="input"
                             value={reviewForm.status}
                             onChange={(e) => setReviewForm((prev) => ({ ...prev, status: e.target.value }))}
@@ -864,7 +864,7 @@ export default function Admin() {
                             {REVIEW_STATUSES.map((status) => (
                               <option key={status} value={status}>{status}</option>
                             ))}
-                          </select>
+                          </SelectInput>
                           <textarea
                             className="input"
                             rows={4}
@@ -1096,7 +1096,7 @@ export default function Admin() {
                 value={productForm.title}
                 onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
               />
-              <select
+              <SelectInput
                 className="input"
                 value={productForm.category}
                 onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
@@ -1105,7 +1105,7 @@ export default function Admin() {
                 <option value="collar">{language === 'ru' ? 'Ошейник' : language === 'kz' ? 'Жаға' : 'Collar'}</option>
                 <option value="toy">{language === 'ru' ? 'Игрушка' : language === 'kz' ? 'Ойыншық' : 'Toy'}</option>
                 <option value="other">{language === 'ru' ? 'Другое' : language === 'kz' ? 'Басқа' : 'Other'}</option>
-              </select>
+              </SelectInput>
               <NumberInput
                 className="input"
                 min="0"
@@ -1259,7 +1259,7 @@ export default function Admin() {
                   <span className="badge bg-nanny-blue/10 text-nanny-blue border border-nanny-blue/10">
                     {language === 'ru' ? 'Оплата' : language === 'kz' ? 'Төлем' : 'Payment'}: {order.payment_status || 'pending'}
                   </span>
-                  <select
+                  <SelectInput
                     className="input min-w-40"
                     value={order.status}
                     onChange={(e) => updateOrderStatus(order.id, e.target.value)}
@@ -1267,7 +1267,7 @@ export default function Admin() {
                     {SHOP_ORDER_STATUSES.map((status) => (
                       <option key={status} value={status}>{status}</option>
                     ))}
-                  </select>
+                  </SelectInput>
                 </div>
               </div>
 

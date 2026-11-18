@@ -11,6 +11,7 @@ import {
   handleProductImageError,
   parseCheckoutAddress,
 } from '../../lib/shop';
+import { SelectInput } from '../../components/FancyInputs';
 
 function StatusRail({ status, t }) {
   const activeIndex = Math.max(SHOP_ORDER_STATUSES.indexOf(status), 0);
@@ -64,7 +65,7 @@ function OrderCard({ order, isAdmin = false, onStatusChange, t, language = "en" 
               <span className={`badge ${SHOP_ORDER_STATUS_META[order.status]?.tone || 'bg-nanny-yellow/80'}`}>
                 {t.statusMeta?.[order.status]?.label || SHOP_ORDER_STATUS_META[order.status]?.label || order.status}
               </span>
-              <select
+              <SelectInput
                 className="input min-w-[180px]"
                 value={order.status}
                 onChange={(e) => onStatusChange(order.id, e.target.value)}
@@ -72,7 +73,7 @@ function OrderCard({ order, isAdmin = false, onStatusChange, t, language = "en" 
                 {SHOP_ORDER_STATUSES.map((status) => (
                   <option key={status} value={status}>{t.statusMeta?.[status]?.label || status}</option>
                 ))}
-              </select>
+              </SelectInput>
             </div>
           )}
         </div>

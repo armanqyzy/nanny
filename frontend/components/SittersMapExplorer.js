@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { absoluteAssetUrl, api } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 import { formatRating } from '../lib/rating';
+import { SelectInput } from './FancyInputs';
 
 const DEFAULT_CENTER = { lat: 43.238949, lng: 76.889709 };
 
@@ -825,7 +826,7 @@ export default function SittersMapExplorer({
               {controlsSlot}
               <label className="text-sm">
                 <span className="mb-1 block font-semibold">{t.sort || 'Sort'}</span>
-                <select
+                <SelectInput
                   className="input min-w-[170px]"
                   value={activeSort}
                   onChange={(event) => updateSort(event.target.value)}
@@ -833,11 +834,11 @@ export default function SittersMapExplorer({
                   <option value="nearest">{t.nearest || 'Nearest first'}</option>
                   <option value="best_rating">{t.bestRating || 'Best rating'}</option>
                   <option value="lowest_price">{t.lowestPrice || 'Lowest price'}</option>
-                </select>
+                </SelectInput>
               </label>
               <label className="text-sm">
                 <span className="mb-1 block font-semibold">{t.distance || 'Distance'}</span>
-                <select
+                <SelectInput
                   className="input min-w-[160px]"
                   value={activeMaxDistance}
                   onChange={(event) => updateMaxDistance(Number(event.target.value))}
@@ -848,14 +849,14 @@ export default function SittersMapExplorer({
                   <option value={25}>25 km</option>
                   <option value={40}>40 km</option>
                   <option value={0}>{language === 'ru' ? 'Везде' : language === 'kz' ? 'Барлық жерде' : 'Anywhere'}</option>
-                </select>
+                </SelectInput>
               </label>
               <button type="button" className="btn-ghost self-end" onClick={useMyLocation} disabled={isLocating}>
                 {isLocating ? (t.locating || 'Detecting location...') : (t.detectLocation || 'Use my location')}
               </button>
               <label className="text-sm">
                 <span className="mb-1 block font-semibold">{language === 'ru' ? 'Район' : language === 'kz' ? 'Аудан' : 'District'}</span>
-                <select
+                <SelectInput
                   className="input min-w-[170px]"
                   value=""
                   onChange={(event) => {
@@ -865,7 +866,7 @@ export default function SittersMapExplorer({
                 >
                   <option value="">{language === 'ru' ? 'Выбрать район...' : language === 'kz' ? 'Ауданды таңдау...' : 'Choose a district...'}</option>
                   {ALMATY_DISTRICTS.map((item) => <option key={item.key} value={item.key}>{item[language] || item.en}</option>)}
-                </select>
+                </SelectInput>
               </label>
               <button type="button" className="btn-ghost self-end" onClick={resetToAlmaty}>
                 {language === 'ru' ? 'Центр Алматы' : language === 'kz' ? 'Алматы орталығы' : 'Almaty center'}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { api, currentUser } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
+import { SelectInput } from '../components/FancyInputs';
 
 const CATEGORIES = ['booking_issue', 'payment_issue', 'safety_concern', 'sitter_report', 'shop_order', 'technical_issue', 'other'];
 
@@ -286,24 +287,23 @@ export default function SupportPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{copy.issueCategory}</label>
                 <div className="relative">
-                  <select
-                    className="input appearance-none pr-12"
+                  <SelectInput
+                    className="input"
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                   >
                     {CATEGORIES.map((value) => (
                       <option key={value} value={value}>{copy.categoryLabels[value]}</option>
                     ))}
-                  </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-nanny-brownish/45">⌄</span>
+                  </SelectInput>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-nanny-brownish/60">{copy.categoryHelp[form.category]}</p>
               </div>
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{copy.priority}</label>
                 <div className="relative">
-                  <select
-                    className="input appearance-none pr-12"
+                  <SelectInput
+                    className="input"
                     value={form.priority}
                     onChange={(e) => setForm({ ...form, priority: e.target.value })}
                   >
@@ -311,8 +311,7 @@ export default function SupportPage() {
                     <option value="normal">{copy.priorityLabels.normal}</option>
                     <option value="high">{copy.priorityLabels.high}</option>
                     <option value="urgent">{copy.priorityLabels.urgent}</option>
-                  </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-nanny-brownish/45">⌄</span>
+                  </SelectInput>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-nanny-brownish/60">{copy.priorityHelp[form.priority]}</p>
               </div>
