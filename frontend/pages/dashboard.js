@@ -24,6 +24,10 @@ const DEFAULT_SITTER_SERVICES = [
 ];
 
 const WORK_DAY_OPTIONS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WORK_DAY_LABELS = {
+  ru: { Mon: 'Пн', Tue: 'Вт', Wed: 'Ср', Thu: 'Чт', Fri: 'Пт', Sat: 'Сб', Sun: 'Вс' },
+  kz: { Mon: 'Дс', Tue: 'Сс', Wed: 'Ср', Thu: 'Бс', Fri: 'Жм', Sat: 'Сн', Sun: 'Жс' },
+};
 
 // Small inline translations for blocks that had English-only text.
 function tr(language, en, ru, kz) {
@@ -342,7 +346,7 @@ export default function Dashboard() {
       template: (index) => `Шаблон ${index + 1}`,
       autoReplyHint: 'Используйте это для быстрых ответов: подтверждение доступности, первый ответ и follow-up после прогулки.',
       servicePricing: 'Цены на услуги',
-      pricingTitle: 'Прогулки, daycare, передержка, груминг, помощь с лекарствами',
+      pricingTitle: 'Прогулки, дневной присмотр, передержка, груминг, помощь с лекарствами',
       price: 'Цена',
       saveWorkspace: 'Сохранить кабинет ситтера',
       myPets: 'Мои питомцы',
@@ -465,7 +469,7 @@ export default function Dashboard() {
       template: (index) => `Үлгі ${index + 1}`,
       autoReplyHint: 'Мұны тез жауаптар үшін қолданыңыз: қолжетімділікті растау, алғашқы жауап және серуеннен кейінгі follow-up.',
       servicePricing: 'Қызмет бағалары',
-      pricingTitle: 'Серуен, daycare, пансион, груминг, дәрі-дәрмек күтімі',
+      pricingTitle: 'Серуен, күндізгі күтім, түнеумен күтім, груминг, дәрі-дәрмек көмегі',
       price: 'Баға',
       saveWorkspace: 'Ситтер кабинетін сақтау',
       myPets: 'Менің жануарларым',
@@ -1154,7 +1158,7 @@ export default function Dashboard() {
                         onClick={() => toggleWorkDay(day)}
                         className={`rounded-2xl px-4 py-2 text-sm ${active ? 'bg-nanny-orange text-white' : 'bg-white border border-nanny-orange/20 text-nanny-brownish'}`}
                       >
-                        {day}
+                        {WORK_DAY_LABELS[language]?.[day] || day}
                       </button>
                     );
                   })}
@@ -1192,7 +1196,7 @@ export default function Dashboard() {
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {servicesForm.map((item, index) => (
                 <div key={item.service} className="rounded-2xl border border-nanny-orange/15 bg-white p-4">
-                  <p className="font-semibold capitalize">{item.service.replace('_', ' ')}</p>
+                  <p className="font-semibold">{serviceName(item.service, language)}</p>
                   <NumberInput
                     className="input mt-3"
                     placeholder={t.price || 'Price'}

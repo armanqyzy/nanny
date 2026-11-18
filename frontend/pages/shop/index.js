@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import DashboardLayout from '../../components/DashboardLayout';
 import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
-import { STORE_INFO, handleProductImageError } from '../../lib/shop';
+import { STORE_INFO, handleProductImageError, storeHours, storeDelivery } from '../../lib/shop';
 import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
 import { NumberInput } from '../../components/FancyInputs';
@@ -169,7 +169,7 @@ export default function Shop() {
       categories: {
         '': 'Барлығы',
         food: 'Жем',
-        collar: 'Жаға',
+        collar: 'Қарғыбау',
         toy: 'Ойыншықтар',
       },
     },
@@ -215,8 +215,8 @@ export default function Shop() {
             <div className="grid gap-2 text-sm md:grid-cols-2">
               <p><span className="font-semibold">{copy.location}</span> {STORE_INFO.address}</p>
               <p><span className="font-semibold">{copy.phone}</span> <a className="text-nanny-blue hover:underline" href={`tel:${STORE_INFO.phone}`}>{STORE_INFO.phone}</a></p>
-              <p><span className="font-semibold">{copy.workingHours}</span> {STORE_INFO.hours}</p>
-              <p><span className="font-semibold">{copy.delivery}</span> {STORE_INFO.deliveryNote}</p>
+              <p><span className="font-semibold">{copy.workingHours}</span> {storeHours(language)}</p>
+              <p><span className="font-semibold">{copy.delivery}</span> {storeDelivery(language)}</p>
             </div>
             <div className="flex flex-wrap gap-3">
 {signedIn && (<button onClick={() => router.push('/shop/orders')} className="btn-ghost">
@@ -234,7 +234,7 @@ export default function Shop() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3 self-start lg:self-auto">
-            <button onClick={goCheckout} className="btn-primary" disabled={cartCount === 0}>
+            <button onClick={goCheckout} className="btn-primary whitespace-nowrap" disabled={cartCount === 0}>
               <span className="inline-flex items-center gap-2">
                 <Icon name="shop" className="h-4 w-4" />
                 {copy.cart} ({cartCount})

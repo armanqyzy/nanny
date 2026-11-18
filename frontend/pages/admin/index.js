@@ -1102,7 +1102,7 @@ export default function Admin() {
                 onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
               >
                 <option value="food">{language === 'ru' ? 'Еда' : language === 'kz' ? 'Тағам' : 'Food'}</option>
-                <option value="collar">{language === 'ru' ? 'Ошейник' : language === 'kz' ? 'Жаға' : 'Collar'}</option>
+                <option value="collar">{language === 'ru' ? 'Ошейник' : language === 'kz' ? 'Қарғыбау' : 'Collar'}</option>
                 <option value="toy">{language === 'ru' ? 'Игрушка' : language === 'kz' ? 'Ойыншық' : 'Toy'}</option>
                 <option value="other">{language === 'ru' ? 'Другое' : language === 'kz' ? 'Басқа' : 'Other'}</option>
               </SelectInput>

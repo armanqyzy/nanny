@@ -266,9 +266,9 @@ export default function Navbar() {
                   {user.role === 'admin' ? (
                     <span className="hidden md:inline-flex"><Link href="/admin" className="btn-ghost">{t('shell', 'admin', 'Admin')}</Link></span>
                   ) : (
-                    <span className="hidden md:inline-flex"><Link href="/dashboard" className="btn-ghost">{t('shell', 'myAccount', 'My Account')}</Link></span>
+                    <span className="hidden md:inline-flex"><Link href="/dashboard" className="btn-ghost min-w-[9.5rem] whitespace-nowrap">{t('shell', 'myAccount', 'My Account')}</Link></span>
                   )}
-                  <span className="hidden md:inline-flex"><button onClick={logout} className="btn-secondary">{t('shell', 'logout', 'Logout')}</button></span>
+                  <span className="hidden md:inline-flex"><button onClick={logout} className="btn-secondary min-w-[6rem] whitespace-nowrap">{t('shell', 'logout', 'Logout')}</button></span>
                 </>
               )}
               <span className="md:hidden"><button

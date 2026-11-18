@@ -7,6 +7,17 @@ export const STORE_INFO = {
   deliveryNote: 'Courier delivery across Almaty or self-pickup from the store.',
 };
 
+// Store hours and delivery text in the visitor's language.
+export function storeHours(language = 'en') {
+  return { ru: 'Ежедневно, 10:00–20:00', kz: 'Күн сайын, 10:00–20:00' }[language] || STORE_INFO.hours;
+}
+export function storeDelivery(language = 'en') {
+  return {
+    ru: 'Курьерская доставка по Алматы или самовывоз из магазина.',
+    kz: 'Алматы бойынша курьерлік жеткізу немесе дүкеннен өзіңіз алып кету.',
+  }[language] || STORE_INFO.deliveryNote;
+}
+
 export const PRODUCT_FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=900&auto=format&fit=crop';
 

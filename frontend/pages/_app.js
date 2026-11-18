@@ -1,4 +1,5 @@
 import '../styles/globals.css';
+import '../lib/kkDates';
 import 'leaflet/dist/leaflet.css';
 import Head from 'next/head';
 import { LanguageProvider } from '../lib/i18n';
