@@ -100,6 +100,9 @@ export default function Bookings() {
   // Phones show bookings as short cards; a tap opens the details and actions.
   const [expandedIds, setExpandedIds] = useState({});
   const toggleExpanded = (id) => setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  const [groupMode, setGroupMode] = useState('person');
+  const [openGroups, setOpenGroups] = useState({});
+  const toggleGroup = (key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   const [payBooking, setPayBooking] = useState(null);
   const [payForm, setPayForm] = useState(EMPTY_PAYMENT);
   const [payError, setPayError] = useState('');
@@ -332,7 +335,7 @@ export default function Bookings() {
     }
   }
 
-  function Card({ b, role }) {
+  function Card({ b, role, inGroup = false }) {
     const contactName = role === 'owner' ? b.sitter_name : b.owner_name;
     const contactLabel = role === 'owner' ? (t.sitter || 'Sitter') : (t.owner || 'Owner');
     const serviceLabel = serviceName(b.service, language);
@@ -348,25 +351,35 @@ export default function Bookings() {
           : null;
 
     return (
-      <div className={`overflow-hidden rounded-[26px] border bg-white transition ${open ? 'border-nanny-orange/30 shadow-card' : 'border-nanny-orange/12 shadow-[0_6px_18px_rgba(122,75,31,0.06)] hover:border-nanny-orange/30 hover:shadow-card'}`}>
+      <div className={`overflow-hidden ${inGroup ? 'rounded-2xl' : 'rounded-[26px]'} border bg-white transition ${open ? 'border-nanny-orange/30 shadow-card' : 'border-nanny-orange/12 shadow-[0_6px_18px_rgba(122,75,31,0.06)] hover:border-nanny-orange/30 hover:shadow-card'}`}>
         <button
           type="button"
           onClick={() => toggleExpanded(b.id)}
           aria-expanded={open}
           className={`flex w-full items-center gap-4 px-4 py-4 text-left sm:px-5 ${open ? 'border-b border-nanny-orange/10 bg-gradient-to-r from-white to-[#fff7ee]' : ''}`}
         >
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fff1e2] font-display text-lg font-bold text-nanny-deepOrange">
-            {(contactName || '?').trim().charAt(0).toUpperCase()}
-          </span>
+          {inGroup ? (
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff1e2] text-nanny-deepOrange">
+              <Icon name="calendar" className="h-4 w-4" />
+            </span>
+          ) : (
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fff1e2] font-display text-lg font-bold text-nanny-deepOrange">
+              {(contactName || '?').trim().charAt(0).toUpperCase()}
+            </span>
+          )}
 
           <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="truncate text-base font-bold text-nanny-brownish sm:text-lg">{contactName}</span>
-              <span className="text-xs uppercase tracking-[0.14em] text-nanny-brownish/40">{contactLabel}</span>
-            </span>
+            {inGroup ? (
+              <span className="block truncate text-base font-bold text-nanny-brownish">{shortDates}</span>
+            ) : (
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="truncate text-base font-bold text-nanny-brownish sm:text-lg">{contactName}</span>
+                <span className="text-xs uppercase tracking-[0.14em] text-nanny-brownish/40">{contactLabel}</span>
+              </span>
+            )}
             <span className="mt-0.5 block truncate text-sm text-nanny-brownish/65">
               <span className="capitalize">{serviceLabel}</span> · {b.pet_name}
-              <span className="lg:hidden"> · {shortDates}</span>
+              {!inGroup && <span className="lg:hidden"> · {shortDates}</span>}
             </span>
             {attention && (
               <span className={`mt-1.5 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${attention.className}`}>{attention.text}</span>
@@ -374,10 +387,12 @@ export default function Bookings() {
           </span>
 
           <span className="hidden shrink-0 items-center gap-5 text-sm lg:flex">
-            <span className="flex items-center gap-1.5 text-nanny-brownish/80">
-              <Icon name="calendar" className="h-4 w-4 text-nanny-deepOrange" />
-              {shortDates}
-            </span>
+            {!inGroup && (
+              <span className="flex items-center gap-1.5 text-nanny-brownish/80">
+                <Icon name="calendar" className="h-4 w-4 text-nanny-deepOrange" />
+                {shortDates}
+              </span>
+            )}
             {b.start_time && (
               <span className="flex items-center gap-1.5 text-nanny-brownish/80">
                 <Icon name="clock" className="h-4 w-4 text-nanny-deepOrange" />
@@ -558,6 +573,100 @@ export default function Bookings() {
     );
   }
 
+  function plural(n, forms) {
+    if (language === 'ru') {
+      const m10 = n % 10; const m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return forms[0];
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
+      return forms[2];
+    }
+    return forms[n === 1 ? 0 : 1];
+  }
+
+  function BookingList({ list, role }) {
+    const sorted = [...list].sort((a, b) => dayOf(a.start_date).localeCompare(dayOf(b.start_date)));
+    if (groupMode === 'date') {
+      return sorted.map((b) => <Card key={b.id} b={b} role={role} />);
+    }
+
+    const groups = [];
+    const byKey = {};
+    sorted.forEach((b) => {
+      const key = `${role}-${role === 'owner' ? (b.sitter_user_id || b.sitter_id) : b.owner_id}`;
+      if (!byKey[key]) {
+        byKey[key] = { key, name: role === 'owner' ? b.sitter_name : b.owner_name, items: [] };
+        groups.push(byKey[key]);
+      }
+      byKey[key].items.push(b);
+    });
+    // People who are waiting for an answer come first.
+    const needsAnswer = (g) => g.items.filter((b) => role === 'sitter' && b.status === 'pending').length;
+    groups.sort((a, b) => needsAnswer(b) - needsAnswer(a));
+
+    return groups.map((g) => {
+      if (g.items.length === 1) return <Card key={g.items[0].id} b={g.items[0]} role={role} />;
+
+      const isOpen = Boolean(openGroups[g.key]);
+      const counts = ['pending', 'confirmed', 'completed', 'cancelled']
+        .map((status) => [status, g.items.filter((b) => b.status === status).length])
+        .filter(([, n]) => n > 0);
+      const waiting = needsAnswer(g);
+      const first = g.items[0];
+      const last = g.items[g.items.length - 1];
+      const range = formatDateRange(first.start_date, last.end_date, language);
+      const sum = g.items.filter((b) => b.status !== 'cancelled').reduce((acc, b) => acc + Number(b.total_price || 0), 0);
+      const label = role === 'owner' ? (t.sitter || 'Sitter') : (t.owner || 'Owner');
+
+      return (
+        <div key={g.key} className={`overflow-hidden rounded-[26px] border bg-white transition ${isOpen ? 'border-nanny-orange/30 shadow-card' : 'border-nanny-orange/12 shadow-[0_6px_18px_rgba(122,75,31,0.06)] hover:border-nanny-orange/30 hover:shadow-card'}`}>
+          <button
+            type="button"
+            onClick={() => toggleGroup(g.key)}
+            aria-expanded={isOpen}
+            className={`flex w-full items-center gap-4 px-4 py-4 text-left sm:px-5 ${isOpen ? 'border-b border-nanny-orange/10 bg-gradient-to-r from-white to-[#fff7ee]' : ''}`}
+          >
+            <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nanny-orange font-display text-lg font-bold text-white">
+              {(g.name || '?').trim().charAt(0).toUpperCase()}
+              <span className="absolute -bottom-1 -right-1 grid h-5 min-w-[20px] place-items-center rounded-full border-2 border-white bg-nanny-blue px-1 text-[10px] font-bold">
+                {g.items.length}
+              </span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="truncate text-base font-bold text-nanny-brownish sm:text-lg">{g.name}</span>
+                <span className="text-xs uppercase tracking-[0.14em] text-nanny-brownish/40">{label}</span>
+              </span>
+              <span className="mt-0.5 block truncate text-sm text-nanny-brownish/65">
+                {g.items.length} {plural(g.items.length, language === 'ru' ? ['бронь', 'брони', 'броней'] : language === 'kz' ? ['брондау', 'брондау'] : ['booking', 'bookings'])} · {range}
+              </span>
+              <span className="mt-1.5 flex flex-wrap gap-1.5">
+                {waiting > 0 && (
+                  <span className="rounded-full bg-[#fff1cf] px-2.5 py-0.5 text-xs font-semibold text-[#8d5c0b]">
+                    {language === 'ru' ? `Ждут ответа: ${waiting}` : language === 'kz' ? `Жауап күтуде: ${waiting}` : `${waiting} waiting for your answer`}
+                  </span>
+                )}
+                {counts.filter(([status]) => !(status === 'pending' && waiting > 0)).map(([status, n]) => (
+                  <span key={status} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[status]}`}>
+                    {(STATUS_NAMES[language] || STATUS_NAMES.en)[status]}: {n}
+                  </span>
+                ))}
+              </span>
+            </span>
+            <span className="hidden w-28 shrink-0 text-right text-sm font-bold text-nanny-brownish lg:block">{sum.toLocaleString()} ₸</span>
+            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#fff1e2] text-nanny-deepOrange transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </span>
+          </button>
+          {isOpen && (
+            <div className="space-y-2 bg-[#fffaf4] p-3 sm:p-4">
+              {g.items.map((b) => <Card key={b.id} b={b} role={role} inGroup />)}
+            </div>
+          )}
+        </div>
+      );
+    });
+  }
+
   return (
     <DashboardLayout title="My bookings">
       <section className="mb-6 rounded-[32px] border border-nanny-orange/12 bg-gradient-to-r from-white to-[#fff6e9] px-6 py-6 shadow-card">
@@ -585,6 +694,24 @@ export default function Bookings() {
           </div>
         </div>
       </section>
+
+      <div className="mb-4 flex justify-end">
+        <div className="inline-flex rounded-2xl border border-nanny-orange/20 bg-white p-1 text-sm font-semibold">
+          {[
+            ['person', language === 'ru' ? 'По людям' : language === 'kz' ? 'Адамдар бойынша' : 'By person'],
+            ['date', language === 'ru' ? 'По дате' : language === 'kz' ? 'Күні бойынша' : 'By date'],
+          ].map(([mode, text]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setGroupMode(mode)}
+              className={`rounded-xl px-4 py-2 transition ${groupMode === mode ? 'bg-nanny-orange text-white shadow-sm' : 'text-nanny-brownish hover:bg-[#fff8ef]'}`}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="mb-6 flex items-center gap-2 flex-wrap">
         {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map((status) => (
@@ -617,7 +744,7 @@ export default function Bookings() {
         </div>
       </div>
       <div className="space-y-3">
-        {data.asOwner.filter((b) => filter === 'all' || b.status === filter).length ? data.asOwner.filter((b) => filter === 'all' || b.status === filter).map((b) => <Card key={b.id} b={b} role="owner" />)
+        {data.asOwner.filter((b) => filter === 'all' || b.status === filter).length ? <BookingList list={data.asOwner.filter((b) => filter === 'all' || b.status === filter)} role="owner" />
           : <div className="xl:col-span-2"><EmptyState
               title={(language === 'ru' ? 'Бронирований пока нет' : language === 'kz' ? 'Брондаулар әлі жоқ' : 'No bookings yet')}
               text={t.noBookings || 'No bookings yet. Start by choosing a sitter and creating your first request.'}
@@ -638,7 +765,7 @@ export default function Bookings() {
           </div>
           <div className="space-y-3">
             {data.asSitter.filter((b) => filter === 'all' || b.status === filter).length
-              ? data.asSitter.filter((b) => filter === 'all' || b.status === filter).map((b) => <Card key={b.id} b={b} role="sitter" />)
+              ? <BookingList list={data.asSitter.filter((b) => filter === 'all' || b.status === filter)} role="sitter" />
               : <div className="xl:col-span-2"><EmptyState
                   title={(language === 'ru' ? 'Заказов пока нет' : language === 'kz' ? 'Тапсырыстар әлі жоқ' : 'No requests yet')}
                   text={(language === 'ru' ? 'Когда владелец забронирует вас, заказ появится здесь. Заполненный профиль и фото помогают получать заказы чаще.' : language === 'kz' ? 'Иесі сізді броньдағанда, тапсырыс осында шығады. Толық профиль тапсырысты жиі алуға көмектеседі.' : 'When an owner books you, the request shows up here. A complete profile helps you get booked more often.')}

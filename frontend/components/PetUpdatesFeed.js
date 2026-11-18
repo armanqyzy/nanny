@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { absoluteAssetUrl, api, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
-import { SelectInput } from './FancyInputs';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -151,7 +150,7 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
     };
   }, [bookingId]);
 
-  async function sendUpdate(updateType) {
+  async function sendUpdate(updateType, statusLabel) {
     setError('');
     if (updateType !== 'status' && !form.body.trim() && !form.photo_url.trim()) {
       setError(t.emptySend || 'Add text or photo before sending an update.');
@@ -164,7 +163,7 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
         update_type: updateType,
         body: form.body.trim(),
         photo_url: form.photo_url.trim(),
-        status_label: form.status_label,
+        status_label: statusLabel || form.status_label,
       });
       setForm((prev) => ({ ...prev, body: '', photo_url: '' }));
     } catch (err) {
@@ -225,23 +224,31 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
           {form.photo_url && (
             <img src={absoluteAssetUrl(form.photo_url)} alt={t.previewAlt || 'Update preview'} className="h-40 w-full rounded-2xl object-cover" />
           )}
-          <div className="flex flex-wrap gap-2">
-            <SelectInput
-              className="input max-w-xs"
-              value={form.status_label}
-              onChange={(e) => setForm((prev) => ({ ...prev, status_label: e.target.value }))}
-            >
-              {t.statusOptions?.map((option) => <option key={option}>{option}</option>)}
-            </SelectInput>
-            <button type="button" className="btn-ghost text-sm" disabled={sending} onClick={() => sendUpdate('status')}>
-              {t.sendStatus || 'Send status'}
-            </button>
-            <button type="button" className="btn-secondary text-sm" disabled={sending} onClick={() => sendUpdate('photo')}>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" className="btn-secondary text-sm" disabled={sending || !form.photo_url} onClick={() => sendUpdate('photo')}>
               {t.sendPhoto || 'Send photo'}
             </button>
-            <button type="button" className="btn-primary text-sm" disabled={sending} onClick={() => sendUpdate('update')}>
+            <button type="button" className="btn-primary text-sm" disabled={sending || !form.body.trim()} onClick={() => sendUpdate('update')}>
               {t.sendNote || 'Send note'}
             </button>
+          </div>
+          <div className="border-t border-nanny-orange/10 pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-nanny-brownish/50">
+              {language === 'ru' ? 'Быстрый статус, отправится сразу' : language === 'kz' ? 'Жылдам статус, бірден жіберіледі' : 'Quick status, sends right away'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {t.statusOptions?.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  disabled={sending}
+                  onClick={() => sendUpdate('status', option)}
+                  className="rounded-full border border-green-200 bg-green-50 px-3.5 py-1.5 text-sm font-semibold text-green-700 transition hover:border-green-500 hover:bg-green-500 hover:text-white active:scale-95 disabled:opacity-50"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
