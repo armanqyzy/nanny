@@ -9,7 +9,7 @@ import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 import { petSummaryLine } from '../../lib/pets';
 import { serviceName } from '../../lib/services';
 import { aiDoneMessage, aiLabel, useAiEnabled } from '../../lib/ai';
-import { DateInput, SelectInput, TimeInput } from '../../components/FancyInputs';
+import { DateInput, TimeInput } from '../../components/FancyInputs';
 
 const SERVICE_HINTS = {
   en: {
@@ -522,14 +522,20 @@ export default function SitterPage() {
                       );
                     })}
                   </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    {L('For', 'В течение', 'Ұзақтығы')}
-                    <SelectInput className="input max-w-[110px]" value={book.repeat_weeks} onChange={(e) => setBook({ ...book, repeat_weeks: Number(e.target.value) })}>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>{n}</option>)}
-                    </SelectInput>
-                    {L('weeks', 'нед.', 'апта')}
-                    {repeatCount > 0 && <span className="opacity-70">• {L(`${repeatCount} visits`, `визитов: ${repeatCount}`, `${repeatCount} рет`)}</span>}
-                  </label>
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <span>{L('For', 'В течение', 'Ұзақтығы')}</span>
+                    <div className="inline-flex items-center gap-1 rounded-full border border-nanny-orange/30 bg-white p-1 shadow-sm">
+                      <button type="button" aria-label="-" disabled={book.repeat_weeks <= 1}
+                              onClick={() => setBook({ ...book, repeat_weeks: Math.max(1, Number(book.repeat_weeks) - 1) })}
+                              className="grid h-8 w-8 place-items-center rounded-full bg-[#fff1e2] text-lg font-bold leading-none text-nanny-deepOrange transition hover:bg-nanny-orange hover:text-white active:scale-90 disabled:opacity-35 disabled:hover:bg-[#fff1e2] disabled:hover:text-nanny-deepOrange">−</button>
+                      <span className="min-w-[2.25rem] text-center text-base font-bold tabular-nums">{book.repeat_weeks}</span>
+                      <button type="button" aria-label="+" disabled={book.repeat_weeks >= 8}
+                              onClick={() => setBook({ ...book, repeat_weeks: Math.min(8, Number(book.repeat_weeks) + 1) })}
+                              className="grid h-8 w-8 place-items-center rounded-full bg-[#fff1e2] text-lg font-bold leading-none text-nanny-deepOrange transition hover:bg-nanny-orange hover:text-white active:scale-90 disabled:opacity-35 disabled:hover:bg-[#fff1e2] disabled:hover:text-nanny-deepOrange">+</button>
+                    </div>
+                    <span>{L('weeks', 'нед.', 'апта')}</span>
+                    {repeatCount > 0 && <span className="rounded-full bg-[#fff1e2] px-3 py-1 text-xs font-semibold text-nanny-deepOrange">{L(`${repeatCount} visits`, `визитов: ${repeatCount}`, `${repeatCount} рет`)}</span>}
+                  </div>
                   <p className="text-xs opacity-65">{L('The start date is the first week of the schedule. Each visit is a separate booking.', 'Дата начала — первая неделя расписания. Каждый визит станет отдельной бронью.', 'Басталу күні — кестенің бірінші аптасы. Әр келу жеке брондау болады.')}</p>
                 </div>
               )}
