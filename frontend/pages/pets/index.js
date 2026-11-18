@@ -17,26 +17,26 @@ const EMPTY = {
 };
 
 const PET_TYPE_OPTIONS = [
-  { value: 'dog', label: 'Dog', hint: 'Most common walks and boarding' },
-  { value: 'cat', label: 'Cat', hint: 'Home visits and calm routines' },
-  { value: 'other', label: 'Other', hint: 'Rabbit, hamster, turtle and more' },
+  { value: 'dog', label: 'Dog', hint: 'Most common walks and boarding', label_ru: 'Собака', hint_ru: 'Чаще всего прогулки и передержка', label_kz: 'Ит', hint_kz: 'Көбіне серуен мен түнеумен күтім' },
+  { value: 'cat', label: 'Cat', hint: 'Home visits and calm routines', label_ru: 'Кошка', hint_ru: 'Визиты на дом и спокойный режим', label_kz: 'Мысық', hint_kz: 'Үйге бару және тыныш күн тәртібі' },
+  { value: 'other', label: 'Other', hint: 'Rabbit, hamster, turtle and more', label_ru: 'Другое', hint_ru: 'Кролик, хомяк, черепаха и другие', label_kz: 'Басқа', hint_kz: 'Қоян, атжалман, тасбақа және т.б.' },
 ];
 
 const GENDER_OPTIONS = [
-  { value: 'boy', label: 'Boy' },
-  { value: 'girl', label: 'Girl' },
+  { value: 'boy', label: 'Boy', label_ru: 'Мальчик', label_kz: 'Еркек' },
+  { value: 'girl', label: 'Girl', label_ru: 'Девочка', label_kz: 'Ұрғашы' },
 ];
 
 const SIZE_OPTIONS = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
+  { value: 'small', label: 'Small', label_ru: 'Маленький', label_kz: 'Кішкентай' },
+  { value: 'medium', label: 'Medium', label_ru: 'Средний', label_kz: 'Орташа' },
+  { value: 'large', label: 'Large', label_ru: 'Крупный', label_kz: 'Үлкен' },
 ];
 
 const CARE_OPTIONS = [
-  { value: 'easy', label: 'Easy care' },
-  { value: 'medium', label: 'Medium care' },
-  { value: 'difficult', label: 'Difficult care' },
+  { value: 'easy', label: 'Easy care', label_ru: 'Лёгкий уход', label_kz: 'Жеңіл күтім' },
+  { value: 'medium', label: 'Medium care', label_ru: 'Средний уход', label_kz: 'Орташа күтім' },
+  { value: 'difficult', label: 'Difficult care', label_ru: 'Сложный уход', label_kz: 'Күрделі күтім' },
 ];
 
 function extractCustomPetType(description = '') {
@@ -73,11 +73,13 @@ export default function Pets() {
   const [pageNotice, setPageNotice] = useState('');
   const [medicalPet, setMedicalPet] = useState(null);
   const L = (en, ru, kz) => (language === 'ru' ? ru : language === 'kz' ? kz : en);
+  const opt = (o, field = 'label') => (o ? o[`${field}_${language}`] || o[field] : '');
+  const labelOf = (list, value) => opt(list.find((o) => o.value === value)) || value;
   const [fieldErrors, setFieldErrors] = useState({});
   const t = {
     en: { petProfiles:'Pet profiles', petProfilesText:'Keep each pet card updated with care and health details.', healthNotes:'Health notes', healthNotesText:'Visible reminders for medicines, allergies and vaccinations.', quickAction:'Quick action', quickTitle:'Pet care stays clearer', quickText:'Photos from the media library, health reminders and behavior notes help sitters prepare faster.', noNotes:'No notes yet.', behavior:'Behavior:', health:'Health:', notSpecified:'Not specified', noHealth:'No health notes', edit:'Edit', delete:'Delete', addAnother:'Add another pet', createFirst:'Create first pet profile', addCardText:'Create a profile with photo, health notes and care preferences.', editor:'Pet profile editor', newProfile:'New pet profile', editTitle:'Edit pet profile', addPet:'Add my pet', addPetText:'Add the details a sitter needs before the first walk, stay or update.', close:'Close', profileCompletion:'Profile completion', completionText:'Photos, health details and behavior notes help sitters prepare faster.', general:'General information', generalText:'Start with the basics so bookings and recommendations stay accurate.', required:'Required', petType:'Pet type', gender:'Gender', age:'Age (years)', size:'Size', careLevel:'Care level', photoSection:'Photo from media library', photoText:'A real photo helps sitters recognize your pet right away.', replacePhoto:'Replace pet photo', choosePhoto:'Choose photo from media library', photoHint:'JPG, PNG or WEBP up to 5 MB. Clean, well-lit photos work best.', uploadPhoto:'Upload photo', selectedPhoto:'Photo selected from media library', previewPlaceholder:'Preview placeholder until you upload a photo', remove:'Remove', sitterNotes:'Care notes for sitters', sitterNotesText:'Describe temperament, health and any routines that matter during a booking.', aiWriting:'AI is writing...', improveAi:'Improve with AI', extraNotes:'Extra notes', livePreview:'Live preview', yourPetName:'Your pet name', defaultPreview:'Add a short sitter-facing note so care feels easier from the first booking.', addTemperament:'Add temperament notes', addHealth:'Add health notes', strongProfile:'What makes a strong pet profile', guide1:'Clear photo from your media library', guide2:'Real behavior notes, not just “good dog”', guide3:'Medication, allergies and feeding reminders', guide4:'Short sitter-facing description with routines', cancel:'Cancel', saveChanges:'Save changes', createProfile:'Create pet profile', deleteTitle:'Delete this pet profile?', deleteConfirm:'Delete pet', keepProfile:'Keep profile', customTypePlaceholder:'What kind of animal is it? Example: rabbit, hamster, turtle' },
     ru: { petProfiles:'Профили питомцев', petProfilesText:'Поддерживайте каждую карточку питомца актуальной по уходу и здоровью.', healthNotes:'Заметки о здоровье', healthNotesText:'Видимые напоминания о лекарствах, аллергиях и вакцинации.', quickAction:'Быстрое действие', quickTitle:'Уход за питомцем становится понятнее', quickText:'Фото из медиатеки, напоминания о здоровье и заметки о поведении помогают ситтерам подготовиться быстрее.', noNotes:'Пока нет заметок.', behavior:'Поведение:', health:'Здоровье:', notSpecified:'Не указано', noHealth:'Нет заметок о здоровье', edit:'Изменить', delete:'Удалить', addAnother:'Добавить ещё питомца', createFirst:'Создать первый профиль питомца', addCardText:'Создайте профиль с фото, заметками о здоровье и предпочтениями по уходу.', editor:'Редактор профиля питомца', newProfile:'Новый профиль питомца', editTitle:'Редактировать профиль питомца', addPet:'Добавить питомца', addPetText:'Добавьте детали, которые нужны ситтеру до первой прогулки, передержки или обновления.', close:'Закрыть', profileCompletion:'Заполнение профиля', completionText:'Фото, данные о здоровье и заметки о поведении помогают ситтерам подготовиться быстрее.', general:'Основная информация', generalText:'Начните с базы, чтобы бронирования и рекомендации были точнее.', required:'Обязательно', petType:'Тип питомца', gender:'Пол', age:'Возраст (лет)', size:'Размер', careLevel:'Уровень ухода', photoSection:'Фото из медиатеки', photoText:'Настоящее фото помогает ситтерам сразу узнать вашего питомца.', replacePhoto:'Заменить фото питомца', choosePhoto:'Выбрать фото из медиатеки', photoHint:'JPG, PNG или WEBP до 5 МБ. Лучше всего подходят чистые и хорошо освещённые фото.', uploadPhoto:'Загрузить фото', selectedPhoto:'Фото выбрано из медиатеки', previewPlaceholder:'Временный превью-блок до загрузки фото', remove:'Убрать', sitterNotes:'Заметки для ситтеров', sitterNotesText:'Опишите характер, здоровье и важные рутины, которые влияют на бронирование.', aiWriting:'ИИ пишет...', improveAi:'Улучшить с ИИ', extraNotes:'Дополнительные заметки', livePreview:'Живой превью', yourPetName:'Имя питомца', defaultPreview:'Добавьте короткую заметку для ситтера, чтобы уход был понятнее с первого бронирования.', addTemperament:'Добавьте заметки о характере', addHealth:'Добавьте заметки о здоровье', strongProfile:'Что делает профиль питомца сильным', guide1:'Чёткое фото из вашей медиатеки', guide2:'Реальные заметки о поведении, а не просто “хорошая собака”', guide3:'Напоминания о лекарствах, аллергиях и кормлении', guide4:'Короткое описание для ситтера с рутинами', cancel:'Отмена', saveChanges:'Сохранить изменения', createProfile:'Создать профиль питомца', deleteTitle:'Удалить этот профиль питомца?', deleteConfirm:'Удалить питомца', keepProfile:'Оставить профиль', customTypePlaceholder:'Что это за животное? Например: кролик, хомяк, черепаха' },
-    kz: { petProfiles:'Үй жануары профильдері', petProfilesText:'Әр жануар картасын күтім және денсаулық мәліметтерімен жаңартып отырыңыз.', healthNotes:'Денсаулық жазбалары', healthNotesText:'Дәрілер, аллергия және вакцинация туралы көрінетін еске салғыштар.', quickAction:'Жылдам әрекет', quickTitle:'Жануар күтімі анығырақ болады', quickText:'Медиатекадағы фото, денсаулық еске салғыштары және мінез-құлық жазбалары ситтерлерге тезірек дайындалуға көмектеседі.', noNotes:'Әзірге жазба жоқ.', behavior:'Мінезі:', health:'Денсаулық:', notSpecified:'Көрсетілмеген', noHealth:'Денсаулық жазбасы жоқ', edit:'Өңдеу', delete:'Жою', addAnother:'Тағы бір жануар қосу', createFirst:'Алғашқы жануар профилін жасау', addCardText:'Фото, денсаулық жазбалары және күтім таңдаулары бар профиль жасаңыз.', editor:'Жануар профилін өңдеу', newProfile:'Жаңа жануар профилі', editTitle:'Жануар профилін өңдеу', addPet:'Жануарымды қосу', addPetText:'Алғашқы серуен, уақытша күту немесе жаңарту алдында ситтерге қажет деректерді қосыңыз.', close:'Жабу', profileCompletion:'Профильдің толуы', completionText:'Фото, денсаулық деректері және мінез-құлық жазбалары ситтерлерге тезірек дайындалуға көмектеседі.', general:'Жалпы ақпарат', generalText:'Бронь мен ұсынымдар дәлірек болу үшін негізден бастаңыз.', required:'Міндетті', petType:'Жануар түрі', gender:'Жынысы', age:'Жасы (жыл)', size:'Өлшемі', careLevel:'Күтім деңгейі', photoSection:'Медиатекадан фото', photoText:'Нақты фото ситтерге жануарыңызды бірден тануға көмектеседі.', replacePhoto:'Жануар фотосын ауыстыру', choosePhoto:'Медиатекадан фото таңдау', photoHint:'JPG, PNG немесе WEBP, 5 МБ-қа дейін. Жарық әрі таза фото жақсырақ.', uploadPhoto:'Фото жүктеу', selectedPhoto:'Фото медиатекадан таңдалды', previewPlaceholder:'Фото жүктегенге дейінгі алдын ала көрініс', remove:'Алу', sitterNotes:'Ситтерге арналған жазбалар', sitterNotesText:'Мінезді, денсаулықты және бронь кезінде маңызды болатын әдеттерді сипаттаңыз.', aiWriting:'ИИ жазып жатыр...', improveAi:'ИИ арқылы жақсарту', extraNotes:'Қосымша жазбалар', livePreview:'Тірі алдын ала қарау', yourPetName:'Жануар аты', defaultPreview:'Алғашқы броньдан бастап күтім оңай болу үшін ситтерге қысқа жазба қосыңыз.', addTemperament:'Мінез-құлық жазбаларын қосыңыз', addHealth:'Денсаулық жазбаларын қосыңыз', strongProfile:'Күшті жануар профилін не құрайды', guide1:'Медиатекадан анық фото', guide2:'“Жақсы ит” емес, нақты мінез жазбалары', guide3:'Дәрі, аллергия және тамақтандыру еске салғыштары', guide4:'Ситтерге арналған қысқа сипаттама мен рутиналар', cancel:'Болдырмау', saveChanges:'Өзгерістерді сақтау', createProfile:'Жануар профилін жасау', deleteTitle:'Осы жануар профилін жою керек пе?', deleteConfirm:'Жануарды жою', keepProfile:'Профильді сақтау', customTypePlaceholder:'Бұл қандай жануар? Мысалы: қоян, хомяк, тасбақа' },
+    kz: { petProfiles:'Үй жануары профильдері', petProfilesText:'Әр жануар картасын күтім және денсаулық мәліметтерімен жаңартып отырыңыз.', healthNotes:'Денсаулық жазбалары', healthNotesText:'Дәрілер, аллергия және вакцинация туралы көрінетін еске салғыштар.', quickAction:'Жылдам әрекет', quickTitle:'Жануар күтімі анығырақ болады', quickText:'Медиатекадағы фото, денсаулық еске салғыштары және мінез-құлық жазбалары ситтерлерге тезірек дайындалуға көмектеседі.', noNotes:'Әзірге жазба жоқ.', behavior:'Мінезі:', health:'Денсаулық:', notSpecified:'Көрсетілмеген', noHealth:'Денсаулық жазбасы жоқ', edit:'Өңдеу', delete:'Жою', addAnother:'Тағы бір жануар қосу', createFirst:'Алғашқы жануар профилін жасау', addCardText:'Фото, денсаулық жазбалары және күтім таңдаулары бар профиль жасаңыз.', editor:'Жануар профилін өңдеу', newProfile:'Жаңа жануар профилі', editTitle:'Жануар профилін өңдеу', addPet:'Жануарымды қосу', addPetText:'Алғашқы серуен, уақытша күту немесе жаңарту алдында ситтерге қажет деректерді қосыңыз.', close:'Жабу', profileCompletion:'Профильдің толуы', completionText:'Фото, денсаулық деректері және мінез-құлық жазбалары ситтерлерге тезірек дайындалуға көмектеседі.', general:'Жалпы ақпарат', generalText:'Брондау мен ұсынымдар дәлірек болу үшін негізден бастаңыз.', required:'Міндетті', petType:'Жануар түрі', gender:'Жынысы', age:'Жасы (жыл)', size:'Өлшемі', careLevel:'Күтім деңгейі', photoSection:'Медиатекадан фото', photoText:'Нақты фото ситтерге жануарыңызды бірден тануға көмектеседі.', replacePhoto:'Жануар фотосын ауыстыру', choosePhoto:'Медиатекадан фото таңдау', photoHint:'JPG, PNG немесе WEBP, 5 МБ-қа дейін. Жарық әрі таза фото жақсырақ.', uploadPhoto:'Фото жүктеу', selectedPhoto:'Фото медиатекадан таңдалды', previewPlaceholder:'Фото жүктегенге дейінгі алдын ала көрініс', remove:'Алу', sitterNotes:'Ситтерге арналған жазбалар', sitterNotesText:'Мінезді, денсаулықты және брондау кезінде маңызды болатын әдеттерді сипаттаңыз.', aiWriting:'ЖИ жазып жатыр...', improveAi:'ЖИ арқылы жақсарту', extraNotes:'Қосымша жазбалар', livePreview:'Тірі алдын ала қарау', yourPetName:'Жануар аты', defaultPreview:'Алғашқы брондаудан бастап күтім оңай болу үшін ситтерге қысқа жазба қосыңыз.', addTemperament:'Мінез-құлық жазбаларын қосыңыз', addHealth:'Денсаулық жазбаларын қосыңыз', strongProfile:'Күшті жануар профилін не құрайды', guide1:'Медиатекадан анық фото', guide2:'“Жақсы ит” емес, нақты мінез жазбалары', guide3:'Дәрі, аллергия және тамақтандыру еске салғыштары', guide4:'Ситтерге арналған қысқа сипаттама мен рутиналар', cancel:'Болдырмау', saveChanges:'Өзгерістерді сақтау', createProfile:'Жануар профилін жасау', deleteTitle:'Осы жануар профилін жою керек пе?', deleteConfirm:'Жануарды жою', keepProfile:'Профильді сақтау', customTypePlaceholder:'Бұл қандай жануар? Мысалы: қоян, хомяк, тасбақа' },
   }[language] || {};
 
   useEffect(() => {
@@ -130,17 +132,17 @@ export default function Pets() {
   async function save() {
     const nextErrors = {};
 
-    if (!form.name.trim()) nextErrors.name = 'Add your pet name.';
-    if (form.pet_type === 'other' && !form.custom_pet_type.trim()) nextErrors.pet_type = 'Tell us what type of pet you have.';
-    if (form.age === '') nextErrors.age = 'Add your pet age.';
-    if (form.age !== '' && (Number(form.age) < 0 || Number(form.age) > 100)) nextErrors.age = 'Age should be between 0 and 100.';
+    if (!form.name.trim()) nextErrors.name = L('Add your pet name.', 'Укажите имя питомца.', 'Жануардың атын жазыңыз.');
+    if (form.pet_type === 'other' && !form.custom_pet_type.trim()) nextErrors.pet_type = L('Tell us what type of pet you have.', 'Укажите, какой у вас питомец.', 'Жануарыңыздың түрін жазыңыз.');
+    if (form.age === '') nextErrors.age = L('Add your pet age.', 'Укажите возраст питомца.', 'Жануардың жасын жазыңыз.');
+    if (form.age !== '' && (Number(form.age) < 0 || Number(form.age) > 100)) nextErrors.age = L('Age should be between 0 and 100.', 'Возраст должен быть от 0 до 100.', 'Жасы 0 мен 100 аралығында болуы керек.');
     else if (form.age !== '' && !Number.isInteger(Number(form.age))) {
-      nextErrors.age = 'Use whole years. For a puppy or kitten younger than 1 year, enter 0.';
+      nextErrors.age = L('Use whole years. For a puppy or kitten younger than 1 year, enter 0.', 'Укажите целое число лет. Если щенку или котёнку меньше года, введите 0.', 'Толық жылмен жазыңыз. Күшік не марғау 1 жасқа толмаса, 0 деп жазыңыз.');
     }
 
     if (Object.keys(nextErrors).length) {
       setFieldErrors(nextErrors);
-      setFormError('Please complete the highlighted fields.');
+      setFormError(L('Please complete the highlighted fields.', 'Заполните отмеченные поля.', 'Белгіленген өрістерді толтырыңыз.'));
       return;
     }
 
@@ -235,13 +237,13 @@ export default function Pets() {
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       // iPhone photos are often HEIC, which the server does not accept.
-      setPhotoError('Please choose a JPG, PNG or WEBP photo. iPhone HEIC photos are not supported yet: export or screenshot the photo as JPG first.');
+      setPhotoError(L('Please choose a JPG, PNG or WEBP photo. iPhone HEIC photos are not supported yet: export or screenshot the photo as JPG first.', 'Выберите фото в формате JPG, PNG или WEBP. Фото HEIC с iPhone пока не поддерживаются: сохраните фото как JPG или сделайте скриншот.', 'JPG, PNG не WEBP фотосын таңдаңыз. iPhone-ның HEIC фотолары әзірге қолдау таппайды: фотоны JPG етіп сақтаңыз не скриншот жасаңыз.'));
       event.target.value = '';
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setPhotoError('Photo must be smaller than 5 MB.');
+      setPhotoError(L('Photo must be smaller than 5 MB.', 'Фото должно быть меньше 5 МБ.', 'Фото 5 МБ-тан аз болуы керек.'));
       event.target.value = '';
       return;
     }
@@ -269,9 +271,9 @@ export default function Pets() {
   const completionPercent = Math.round((completedFields / 5) * 100);
 
   const petTypeLabel = form.pet_type === 'other'
-    ? (form.custom_pet_type.trim() || 'custom pet')
-    : form.pet_type;
-  const previewNotes = form.description || form.behavior || 'Add a short sitter-facing note so care feels easier from the first booking.';
+    ? (form.custom_pet_type.trim() || L('custom pet', 'другой питомец', 'басқа жануар'))
+    : labelOf(PET_TYPE_OPTIONS, form.pet_type);
+  const previewNotes = form.description || form.behavior || L('Add a short sitter-facing note so care feels easier from the first booking.', 'Добавьте короткую заметку для ситтера, чтобы уход был проще с первой брони.', 'Ситтерге қысқа жазба қосыңыз, сонда алғашқы брондаудан-ақ күтім оңай болады.');
 
   return (
     <DashboardLayout title="My pets">
@@ -436,8 +438,8 @@ export default function Pets() {
                             >
                               <div className="flex h-full items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-semibold">{option.label}</p>
-                                  <p className="mt-2 text-sm leading-5 font-medium text-nanny-brownish/55">{option.hint}</p>
+                                  <p className="text-sm font-semibold">{opt(option)}</p>
+                                  <p className="mt-2 text-sm leading-5 font-medium text-nanny-brownish/55">{opt(option, 'hint')}</p>
                                 </div>
                                 {form.pet_type === option.value && (
                                   <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-nanny-orange text-white">
@@ -476,7 +478,7 @@ export default function Pets() {
                                   : 'border-nanny-orange/20 bg-white text-nanny-brownish hover:bg-[#fff8ef]'
                               }`}
                             >
-                              {option.label}
+                              {opt(option)}
                             </button>
                           ))}
                         </div>
@@ -503,7 +505,7 @@ export default function Pets() {
                                   : 'border-nanny-orange/20 bg-white text-nanny-brownish hover:bg-[#fff8ef]'
                               }`}
                             >
-                              {option.label}
+                              {opt(option)}
                             </button>
                           ))}
                         </div>
@@ -522,7 +524,7 @@ export default function Pets() {
                                   : 'border-nanny-orange/20 bg-white text-nanny-brownish hover:bg-[#fff8ef]'
                               }`}
                             >
-                              {option.label}
+                              {opt(option)}
                             </button>
                           ))}
                         </div>
@@ -603,21 +605,21 @@ export default function Pets() {
                     <div className="mt-4 space-y-4">
                       <div>
                         <p className="mb-2 text-sm font-semibold text-nanny-deepOrange">{t.behavior || 'Behavior:'}</p>
-                        <textarea className="input min-h-[92px]" placeholder="Friendly, calm, energetic, shy with strangers, loves long walks..."
+                        <textarea className="input min-h-[92px]" placeholder={L('Friendly, calm, energetic, shy with strangers, loves long walks...', 'Дружелюбный, спокойный, энергичный, стесняется чужих, любит долгие прогулки...', 'Мейірімді, сабырлы, белсенді, бөтеннен жасқанады, ұзақ серуенді жақсы көреді...')}
                                   value={form.behavior}
                                   onChange={(e) => setForm({ ...form, behavior: e.target.value })} />
                       </div>
 
                       <div>
                         <p className="mb-2 text-sm font-semibold text-nanny-deepOrange">{t.health || 'Health:'}</p>
-                        <textarea className="input min-h-[92px]" placeholder="Vaccinations, allergies, medication schedule, food restrictions..."
+                        <textarea className="input min-h-[92px]" placeholder={L('Vaccinations, allergies, medication schedule, food restrictions...', 'Прививки, аллергии, график лекарств, ограничения в еде...', 'Екпелер, аллергия, дәрі кестесі, тамақтағы шектеулер...')}
                                   value={form.health}
                                   onChange={(e) => setForm({ ...form, health: e.target.value })} />
                       </div>
 
                       <div>
                         <p className="mb-2 text-sm font-semibold text-nanny-deepOrange">{t.extraNotes || 'Extra notes'}</p>
-                        <textarea className="input min-h-[120px]" placeholder="Share routines, favorite toys, sleeping habits or anything that helps a sitter care well."
+                        <textarea className="input min-h-[120px]" placeholder={L('Share routines, favorite toys, sleeping habits or anything that helps a sitter care well.', 'Режим дня, любимые игрушки, привычки во сне и всё, что поможет ситтеру.', 'Күн тәртібі, сүйікті ойыншықтар, ұйқы әдеттері және ситтерге көмектесетін бәрі.')}
                                   value={form.description}
                                   onChange={(e) => setForm({ ...form, description: e.target.value })} />
                       </div>
@@ -646,13 +648,13 @@ export default function Pets() {
                       <div>
                         <h3 className="text-2xl font-bold">{form.name.trim() || (t.yourPetName || 'Your pet name')}</h3>
                         <p className="mt-1 text-sm opacity-70 capitalize">
-                          {petTypeLabel} • {form.gender} • {form.age || '?'}y • {form.size}
+                          {petTypeLabel} • {labelOf(GENDER_OPTIONS, form.gender)} • {form.age || '?'} {L('y', 'г.', 'ж.')} • {labelOf(SIZE_OPTIONS, form.size)}
                         </p>
                       </div>
-                      <span className="badge bg-nanny-yellow/80 text-nanny-brownish capitalize">{form.care_type}</span>
+                      <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{labelOf(CARE_OPTIONS, form.care_type)}</span>
                     </div>
 
-                    <p className="mt-4 text-sm leading-6 opacity-80">{previewNotes === 'Add a short sitter-facing note so care feels easier from the first booking.' ? (t.defaultPreview || previewNotes) : previewNotes}</p>
+                    <p className="mt-4 text-sm leading-6 opacity-80">{previewNotes}</p>
 
                     <div className="mt-5 space-y-2 text-sm">
                       <p><span className="font-semibold text-nanny-deepOrange">{t.behavior || 'Behavior:'}</span> {form.behavior || (t.addTemperament || 'Add temperament notes')}</p>

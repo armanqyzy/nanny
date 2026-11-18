@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 
 export default function ResetPasswordPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
   const token = useMemo(() => (
     typeof router.query.token === 'string' ? router.query.token : ''
@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
       setMessage(response.message || t('auth', 'resetDone', 'Password updated. You can now sign in.'));
       setTimeout(() => router.push('/login'), 1200);
     } catch (_err) {
-      setError('Could not reset the password. The link may be expired or invalid.');
+      setError((language === 'ru' ? 'Не удалось сменить пароль. Ссылка устарела или неверна.' : language === 'kz' ? 'Құпиясөзді ауыстыру мүмкін болмады. Сілтеменің мерзімі өткен не қате.' : 'Could not reset the password. The link may be expired or invalid.'));
     } finally {
       setBusy(false);
     }

@@ -175,19 +175,19 @@ export default function Bookings() {
     kz: {
       all: 'Барлығы', pending: 'Күтілуде', confirmed: 'Расталды', completed: 'Аяқталды', cancelled: 'Тоқтатылды',
       reviewSubmitted: 'Пікір сәтті жіберілді.',
-      bookingRepeated: 'Бронь сәтті қайталанды.',
+      bookingRepeated: 'Брондау сәтті қайталанды.',
       sitter: 'Ситтер', owner: 'Иесі', pet: 'Жануар',
       dates: 'Күндер', time: 'Уақыт', total: 'Барлығы',
-      timeNotSpecified: 'Уақыт көрсетілмеген', careNote: 'Күтім ескертпесі', liveUpdates: 'Жануар бойынша live жаңартулар',
-      liveUpdatesText: 'Ситтер бронь картасынан жазба, фото немесе статус жібергенде жаңартулар осында көрінеді.',
+      timeNotSpecified: 'Уақыт көрсетілмеген', careNote: 'Күтім ескертпесі', liveUpdates: 'Жануар бойынша тікелей жаңартулар',
+      liveUpdatesText: 'Ситтер брондау картасынан жазба, фото немесе статус жібергенде жаңартулар осында көрінеді.',
       messageSitter: 'Ситтерге жазу', messageOwner: 'Иесіне жазу', confirm: 'Растау', markCompleted: 'Аяқталды деп белгілеу', cancel: 'Тоқтату',
-      reviewSent: 'Пікір жіберілді', leaveReview: 'Рейтинг пен пікір қалдыру', bookAgain: 'Қайта бронь жасау',
-      workspace: 'Бронь кеңістігі',
-      workspaceText: 'Ағымдағы броньдарды бақылаңыз, ситтерлермен сөйлесіңіз, аяқталған күтімді бағалаңыз және live жаңартуларды бір жерден көріңіз.',
-      ownerBookings: 'Ие броньдары',
+      reviewSent: 'Пікір жіберілді', leaveReview: 'Рейтинг пен пікір қалдыру', bookAgain: 'Қайта брондау',
+      workspace: 'Брондау кеңістігі',
+      workspaceText: 'Ағымдағы брондауларды бақылаңыз, ситтерлермен сөйлесіңіз, аяқталған күтімді бағалаңыз және тікелей жаңартуларды бір жерден көріңіз.',
+      ownerBookings: 'Ие брондары',
       asOwner: 'Ие ретінде',
       ownerText: 'Үй жануарларыңыз үшін жасаған сұраныстарыңыз.',
-      noBookings: 'Әзірге бронь жоқ. Алдымен ситтер таңдап, алғашқы сұранысты жасаңыз.',
+      noBookings: 'Әзірге брондау жоқ. Алдымен ситтер таңдап, алғашқы сұранысты жасаңыз.',
       asSitter: 'Ситтер ретінде',
       sitterText: 'Сіз қызмет көрсетуші болып табылатын белсенді күтім сұраныстары.',
       leaveReviewTitle: 'Пікір қалдыру',
@@ -198,10 +198,10 @@ export default function Bookings() {
       reviewPlaceholder: 'Пікіріңізді жазыңыз. Байланыс, ұқыптылық, күтім және жаңартулар туралы нақты жазыңыз.',
       minChars: 'Кемінде 30 таңба.',
       submitReview: 'Пікір жіберу',
-      bookAgainTitle: 'Қайта бронь жасау',
-      repeatBooking: 'Қайта бронь жасау',
+      bookAgainTitle: 'Қайта брондау',
+      repeatBooking: 'Қайта брондау',
       forPet: 'үшін',
-      confirmRepeat: 'Қайта броньды растау',
+      confirmRepeat: 'Қайта брондауды растау',
     },
   }[language] || {};
 
@@ -327,19 +327,19 @@ export default function Bookings() {
     if (!rebookBooking) return;
     const today = todayInAppTimeZone();
     if (!rebookForm.start_date || !rebookForm.end_date) {
-      setRebookMessage('Choose start and end dates.');
+      setRebookMessage((language === 'ru' ? 'Выберите даты начала и окончания.' : language === 'kz' ? 'Басталу және аяқталу күндерін таңдаңыз.' : 'Choose start and end dates.'));
       return;
     }
     if (rebookForm.start_date < today || rebookForm.end_date < today) {
-      setRebookMessage('You cannot book a date in the past.');
+      setRebookMessage((language === 'ru' ? 'Нельзя забронировать прошедшую дату.' : language === 'kz' ? 'Өткен күнді брондауға болмайды.' : 'You cannot book a date in the past.'));
       return;
     }
     if (rebookForm.start_date > rebookForm.end_date) {
-      setRebookMessage('End date must be the same day or later than the start date.');
+      setRebookMessage((language === 'ru' ? 'Дата окончания должна быть не раньше даты начала.' : language === 'kz' ? 'Аяқталу күні басталу күнінен ерте болмауы керек.' : 'End date must be the same day or later than the start date.'));
       return;
     }
     if (rebookForm.start_date === today && rebookForm.start_time && rebookForm.start_time <= nowTimeInAppTimeZone()) {
-      setRebookMessage('This start time has already passed today. Choose a later time.');
+      setRebookMessage((language === 'ru' ? 'Это время сегодня уже прошло. Выберите время позже.' : language === 'kz' ? 'Бұл уақыт бүгін өтіп кетті. Кешірек уақытты таңдаңыз.' : 'This start time has already passed today. Choose a later time.'));
       return;
     }
     try {
@@ -793,7 +793,7 @@ export default function Bookings() {
               ? <BookingList list={data.asSitter.filter((b) => filter === 'all' || b.status === filter)} role="sitter" />
               : <div className="xl:col-span-2"><EmptyState
                   title={(language === 'ru' ? 'Заказов пока нет' : language === 'kz' ? 'Тапсырыстар әлі жоқ' : 'No requests yet')}
-                  text={(language === 'ru' ? 'Когда владелец забронирует вас, заказ появится здесь. Заполненный профиль и фото помогают получать заказы чаще.' : language === 'kz' ? 'Иесі сізді броньдағанда, тапсырыс осында шығады. Толық профиль тапсырысты жиі алуға көмектеседі.' : 'When an owner books you, the request shows up here. A complete profile helps you get booked more often.')}
+                  text={(language === 'ru' ? 'Когда владелец забронирует вас, заказ появится здесь. Заполненный профиль и фото помогают получать заказы чаще.' : language === 'kz' ? 'Иесі сізді брондағанда, тапсырыс осында шығады. Толық профиль тапсырысты жиі алуға көмектеседі.' : 'When an owner books you, the request shows up here. A complete profile helps you get booked more often.')}
                   actionLabel={(language === 'ru' ? 'Мой профиль' : language === 'kz' ? 'Менің профилім' : 'My profile')}
                   actionHref="/dashboard"
                 /></div>}

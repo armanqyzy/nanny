@@ -6,7 +6,7 @@ import { absoluteAssetUrl, api, currentUser, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 import { formatRating } from '../lib/rating';
 import { petSummaryLine } from '../lib/pets';
-import { serviceName } from '../lib/services';
+import { localeFor, serviceName } from '../lib/services';
 import SitterAvailabilityPanel from '../components/SitterAvailabilityPanel';
 import IncomeChart from '../components/IncomeChart';
 import EmptyState from '../components/EmptyState';
@@ -344,7 +344,7 @@ export default function Dashboard() {
       clientCommunication: 'Коммуникация с клиентом',
       autoReplies: 'Автоответы и шаблоны сообщений',
       template: (index) => `Шаблон ${index + 1}`,
-      autoReplyHint: 'Используйте это для быстрых ответов: подтверждение доступности, первый ответ и follow-up после прогулки.',
+      autoReplyHint: 'Используйте это для быстрых ответов: подтверждение доступности, первый ответ и сообщение после прогулки.',
       servicePricing: 'Цены на услуги',
       pricingTitle: 'Прогулки, дневной присмотр, передержка, груминг, помощь с лекарствами',
       price: 'Цена',
@@ -375,7 +375,7 @@ export default function Dashboard() {
       ownerJourney: 'Ие жолы',
       welcome: (name) => `Қош келдіңіз, ${name}`,
       completeOwnerSetup: 'Жануар иесі профилін аяқтаңыз',
-      ownerSetupText: 'Тіркелу, жануар профилі, ситтер іздеу, бронь, чат және пікір бір байланысқан сценарий сияқты сезілуі керек. Бұл қадамдар алға жылжуға көмектеседі.',
+      ownerSetupText: 'Тіркелу, жануар профилі, ситтер іздеу, брондау, чат және пікір бір байланысқан сценарий сияқты сезілуі керек. Бұл қадамдар алға жылжуға көмектеседі.',
       findSitter: 'Ситтер табу',
       addMyPet: 'Жануар қосу',
       step: 'Қадам',
@@ -389,8 +389,8 @@ export default function Dashboard() {
       petProfileActionDone: 'Жануарларды басқару',
       petProfileActionTodo: 'Жануар профилін жасау',
       petProfileDescription: 'Жануардың фотосы, жасы, денсаулығы және мінезі ситтерге дұрыс дайындалуға көмектеседі.',
-      bookingTitle: 'Ситтерді броньдап, жаңартуларды бақылаңыз',
-      viewBookings: 'Броньдарды ашу',
+      bookingTitle: 'Ситтерді брондап, жаңартуларды бақылаңыз',
+      viewBookings: 'Брондауларды ашу',
       browseSitters: 'Ситтерлерді қарау',
       addPetFirst: 'Алдымен жануар қосу',
       bookingDescription: 'Ситтерді таңдап, күндерді растап, күтім процесін бір жерде ұстаңыз.',
@@ -431,7 +431,7 @@ export default function Dashboard() {
       noAdminNotes: 'Әкімші жазбалары әлі жоқ. Тексеруді бастау үшін құжат жіберіңіз.',
       openVerification: 'Тексеру орталығын ашу',
       trustTools: 'Сенім құралдары',
-      confidenceTitle: 'Бронь алдында сенімді не арттырады',
+      confidenceTitle: 'Брондау алдында сенімді не арттырады',
       trustBullets: ['Ситтер карталарындағы тексерілген белгі', 'Қолмен тексеру тарихы және қолдау эскалациясы', 'Аккаунтта сақталған шұғыл контакт', 'Даулы жағдай ағыны және анық қауіпсіздік ережелері'],
       browseVerified: 'Тексерілген ситтерлерді қарау',
       howChecksWork: 'Тексеру қалай жүреді',
@@ -442,10 +442,10 @@ export default function Dashboard() {
       reviewsCount: 'Пікірлер',
       reviewsWord: 'пікір',
       upcomingWork: 'Жақын жұмыс',
-      upcomingTitle: 'Алдағы броньдар және күтудегі сұраныстар',
-      openBookings: 'Броньдарды ашу',
+      upcomingTitle: 'Алдағы брондаулар және күтудегі сұраныстар',
+      openBookings: 'Брондауларды ашу',
       timeNotSpecified: 'Уақыт әлі көрсетілмеген',
-      noUpcoming: 'Алдағы броньдар әлі жоқ.',
+      noUpcoming: 'Алдағы брондаулар әлі жоқ.',
       verifiedProfile: 'Тексерілген профиль',
       currentStatus: 'Ситтердің ағымдағы күйі',
       approval: 'Мақұлдау',
@@ -467,7 +467,7 @@ export default function Dashboard() {
       clientCommunication: 'Клиентпен байланыс',
       autoReplies: 'Авто жауаптар және хабарлама үлгілері',
       template: (index) => `Үлгі ${index + 1}`,
-      autoReplyHint: 'Мұны тез жауаптар үшін қолданыңыз: қолжетімділікті растау, алғашқы жауап және серуеннен кейінгі follow-up.',
+      autoReplyHint: 'Мұны тез жауаптар үшін қолданыңыз: қолжетімділікті растау, алғашқы жауап және серуеннен кейінгі хабарлама.',
       servicePricing: 'Қызмет бағалары',
       pricingTitle: 'Серуен, күндізгі күтім, түнеумен күтім, груминг, дәрі-дәрмек көмегі',
       price: 'Баға',
@@ -475,10 +475,10 @@ export default function Dashboard() {
       myPets: 'Менің жануарларым',
       managePets: 'Жануарларды басқару',
       noPets: 'Жануарлар әлі жоқ.',
-      bookAgainKnown: 'Таныс ситтермен қайта бронь жасау',
+      bookAgainKnown: 'Таныс ситтермен қайта брондау',
       perksEyebrow: 'Клиент артықшылықтары',
       perksTitle: 'Nanny Club артықшылықтарыңыз',
-      perksText: 'Таңдаулы ситтерлерді, қайта броньдауды, хабарламаларды және қолдау тарихын пайдаланып, келесі броньды жылдамырақ жасаңыз.',
+      perksText: 'Таңдаулы ситтерлерді, қайта брондауды, хабарламаларды және қолдау тарихын пайдаланып, келесі брондауды жылдамырақ жасаңыз.',
       perkItems: [
         ['heart', 'Таңдаулы ситтерлер', 'Сенімді ситтерлерге қайта іздемей оралыңыз.'],
         ['repeat', 'Қайта броньдау', 'Сақталған жануар жазбаларымен аяқталған күтімді қайталаңыз.'],
@@ -620,9 +620,9 @@ export default function Dashboard() {
       });
       const dashboardData = await api.get('/api/sitters/me/dashboard');
       setSitterDashboard(dashboardData);
-      setSitterMessage('Sitter workspace updated.');
+      setSitterMessage(tr(language, 'Sitter workspace updated.', 'Кабинет ситтера сохранён.', 'Ситтер кабинеті сақталды.'));
     } catch (err) {
-      setSitterMessage(err.message || 'Failed to update sitter workspace.');
+      setSitterMessage(err.message || tr(language, 'Failed to update sitter workspace.', 'Не удалось сохранить кабинет ситтера.', 'Ситтер кабинетін сақтау мүмкін болмады.'));
     }
   }
 
@@ -1257,21 +1257,21 @@ export default function Dashboard() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="font-bold text-nanny-deepOrange">{t.bookAgainKnown || 'Book again with sitters you know'}</h3>
-            <p className="mt-1 text-sm opacity-70">Quick return to sitters who already completed a booking with your pet.</p>
+            <p className="mt-1 text-sm opacity-70">{tr(language, 'Quick return to sitters who already completed a booking with your pet.', 'Быстро вернуться к ситтерам, которые уже ухаживали за вашим питомцем.', 'Жануарыңызға бұрын күтім жасаған ситтерлерге тез оралу.')}</p>
           </div>
-          <a href="/bookings" className="btn-ghost">Booking history</a>
+          <a href="/bookings" className="btn-ghost">{tr(language, 'Booking history', 'История броней', 'Брондаулар тарихы')}</a>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {bookAgainCandidates.map((bookingItem) => (
             <article key={bookingItem.id} className="rounded-2xl border border-nanny-orange/20 bg-white p-4">
               <div className="font-bold">{bookingItem.sitter_name}</div>
-              <div className="mt-1 text-sm opacity-70">{bookingItem.service} with {bookingItem.pet_name}</div>
+              <div className="mt-1 text-sm opacity-70">{serviceName(bookingItem.service, language)} · {bookingItem.pet_name}</div>
               <div className="mt-3 text-sm opacity-70">
-                Last booking: {new Date(bookingItem.end_date).toLocaleDateString()}
+                {tr(language, 'Last booking:', 'Последняя бронь:', 'Соңғы брондау:')} {new Date(bookingItem.end_date).toLocaleDateString(localeFor(language), { day: 'numeric', month: 'long', year: 'numeric' })}
               </div>
               <div className="mt-4 flex gap-2">
-                <a href={`/sitters/${bookingItem.sitter_id}`} className="btn-secondary text-sm">Open sitter</a>
-                <a href={`/bookings?review=${bookingItem.id}`} className="btn-ghost text-sm">Review / repeat</a>
+                <a href={`/sitters/${bookingItem.sitter_id}`} className="btn-secondary text-sm">{tr(language, 'Open sitter', 'Открыть ситтера', 'Ситтерді ашу')}</a>
+                <a href={`/bookings?review=${bookingItem.id}`} className="btn-ghost text-sm">{tr(language, 'Review / repeat', 'Отзыв / повторить', 'Пікір / қайталау')}</a>
               </div>
             </article>
           ))}
@@ -1351,10 +1351,10 @@ export default function Dashboard() {
                 <div className="mt-1 text-sm opacity-70">{sitter.city}, {sitter.district}</div>
                 <div className="mt-3 flex gap-2 text-sm">
                   <span className="badge bg-blue-100 text-nanny-blue">⭐ {formatRating(sitter.rating, sitter.rating_count, language)}</span>
-                  <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{Number(sitter.price_per_day || 0).toLocaleString()} ₸/day</span>
+                  <span className="badge bg-nanny-yellow/80 text-nanny-brownish">{Number(sitter.price_per_day || 0).toLocaleString()} ₸/{tr(language, 'day', 'день', 'күн')}</span>
                 </div>
                 <button type="button" onClick={() => router.push(`/sitters/${sitter.id}`)} className="btn-primary mt-4 w-full">
-                  Open sitter
+                  {tr(language, 'Open sitter', 'Открыть ситтера', 'Ситтерді ашу')}
                 </button>
               </div>
             </article>

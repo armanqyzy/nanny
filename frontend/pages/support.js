@@ -147,8 +147,8 @@ export default function SupportPage() {
       subjectPlaceholder: 'Қысқа жазыңыз, мысалы: Бас тартылған ойыншық тапсырысына қайтарым',
       subjectHelp: 'Қысқа әрі нақты тақырып сұрауды тезірек бағыттауға көмектеседі.',
       whatHappened: 'Не болды',
-      bodyPlaceholder: 'Не болғанын, қай бронь не тапсырысқа қатысты екенін, қашан болғанын және қандай нәтиже күтетіндігіңізді жазыңыз.',
-      bodyHelp: 'Пайдалы мәліметтер: бронь күндері, ситтер аты, тапсырыс нөмірі, төлем сомасы, скриншоттар және қолдаудан не күтетініңіз.',
+      bodyPlaceholder: 'Не болғанын, қай брондау не тапсырысқа қатысты екенін, қашан болғанын және қандай нәтиже күтетіндігіңізді жазыңыз.',
+      bodyHelp: 'Пайдалы мәліметтер: брондау күндері, ситтер аты, тапсырыс нөмірі, төлем сомасы, скриншоттар және қолдаудан не күтетініңіз.',
       createTicket: 'Тикет ашу',
       sending: 'Жіберілуде...',
       success: 'Қолдау сұрауы жасалды.',
@@ -163,7 +163,7 @@ export default function SupportPage() {
         '4. Қорытынды жазбалар қолдау тарихында сақталады.',
       ],
       categoryLabels: {
-        booking_issue: 'Бронь мәселесі',
+        booking_issue: 'Брондау мәселесі',
         payment_issue: 'Төлем мәселесі',
         safety_concern: 'Қауіпсіздік мәселесі',
         sitter_report: 'Ситтерге шағым',
@@ -172,7 +172,7 @@ export default function SupportPage() {
         other: 'Басқа',
       },
       categoryHelp: {
-        booking_issue: 'Броньды растау, болдырмау, уақыт немесе ситтердің келмеуі үшін қолданыңыз.',
+        booking_issue: 'Брондауды растау, болдырмау, уақыт немесе ситтердің келмеуі үшін қолданыңыз.',
         payment_issue: 'Картадан ақша шешілуі, қайтарым, қайталанған төлем не төлем қатесі үшін қолданыңыз.',
         safety_concern: 'Сізге, жануарыңызға немесе ситтерге қауіпті көрінген жағдай болса осыны таңдаңыз.',
         sitter_report: 'Кәсіби емес әрекет, толық емес профиль немесе нашар күтім туралы шағым үшін қолданыңыз.',
@@ -184,7 +184,7 @@ export default function SupportPage() {
       priorityHelp: {
         low: 'Жай сұрақ, шұғыл әрекет қажет емес.',
         normal: 'Қолдау жақын уақытта қарауы тиіс стандартты мәселе.',
-        high: 'Белсенді бронь не тапсырысқа әсер ететін маңызды мәселе.',
+        high: 'Белсенді брондау не тапсырысқа әсер ететін маңызды мәселе.',
         urgent: 'Тек қауіпсіздікке не уақытқа аса сезімтал жағдайларға.',
       },
       fieldMessages: {
@@ -387,7 +387,7 @@ export default function SupportPage() {
                   <p className="mt-3 text-sm opacity-80 whitespace-pre-line">{ticket.body}</p>
                   {(ticket.ai_summary || ticket.ai_first_reply || ticket.ai_suggested_category || ticket.ai_suggested_priority) && (
                     <div className="mt-3 rounded-xl border border-nanny-blue/10 bg-[#f5f7ff] p-3 text-sm">
-                      <p className="font-semibold text-nanny-blue">AI triage</p>
+                      <p className="font-semibold text-nanny-blue">{(language === 'ru' ? 'Разбор ИИ' : language === 'kz' ? 'ЖИ талдауы' : 'AI triage')}</p>
                       {ticket.ai_summary && <p className="mt-2 opacity-80">{ticket.ai_summary}</p>}
                       <div className="mt-3 flex flex-wrap gap-2 text-xs">
                         {ticket.ai_suggested_category && (
@@ -406,7 +406,7 @@ export default function SupportPage() {
                   )}
                   {ticket.resolution_note && (
                     <div className="mt-3 rounded-xl bg-nanny-cream/70 p-3 text-sm">
-                      <p className="font-semibold">Resolution note</p>
+                      <p className="font-semibold">{(language === 'ru' ? 'Решение' : language === 'kz' ? 'Шешім' : 'Resolution note')}</p>
                       <p className="mt-1 opacity-80">{ticket.resolution_note}</p>
                     </div>
                   )}

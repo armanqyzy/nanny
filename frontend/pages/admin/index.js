@@ -201,7 +201,7 @@ export default function Admin() {
       stats: 'Статистика',
       users: 'Пайдаланушылар',
       pending: 'Тексерудегі ситтерлер',
-      allBookings: 'Барлық броньдар',
+      allBookings: 'Барлық брондаулар',
       support: 'Қолдау',
       shopOrders: 'Дүкен тапсырыстары',
       products: 'Тауарлар',
@@ -209,14 +209,14 @@ export default function Admin() {
       statMeta: {
         active_users: {
           label: 'Белсенді пайдаланушылар',
-          description: 'Бронь, тапсырыс немесе хабарламада жақында белсенді болған қолданушылар.',
+          description: 'Брондау, тапсырыс немесе хабарламада жақында белсенді болған қолданушылар.',
         },
         active_sitters: {
           label: 'Белсенді ситтерлер',
           description: 'Қазір қолжетімді немесе жақында сұраныстармен жұмыс істеген мақұлданған ситтерлер.',
         },
         completed_bookings: {
-          label: 'Аяқталған броньдар',
+          label: 'Аяқталған брондаулар',
           description: 'Платформадағы аяқталған қызметтер.',
         },
         average_rating: {
@@ -253,7 +253,7 @@ export default function Admin() {
       lastReviewed: 'Соңғы тексеру',
       by: 'Орындаған',
       system: 'Жүйе',
-      noBookingsMatch: 'Таңдалған сүзгілерге сай броньдар табылмады.',
+      noBookingsMatch: 'Таңдалған сүзгілерге сай брондаулар табылмады.',
       noShopOrdersYet: 'Дүкен тапсырыстары әлі жоқ.',
       hideProductTitle: 'Бұл тауарды дүкеннен жасыру керек пе?',
       showProductTitle: 'Бұл тауарды дүкенде көрсету керек пе?',
@@ -624,7 +624,7 @@ export default function Admin() {
             <div className="card mb-6">
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="font-bold text-nanny-deepOrange">Applications Needing Action Today</h3>
+                  <h3 className="font-bold text-nanny-deepOrange">{(language === 'ru' ? 'Заявки, требующие действий сегодня' : language === 'kz' ? 'Бүгін әрекет керек өтінімдер' : 'Applications needing action today')}</h3>
                   <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'Быстрый доступ к заявкам, которым сегодня нужно внимание модератора.' : language === 'kz' ? 'Бүгін модератор назарын қажет ететін өтінімдерге жылдам қолжеткізу.' : 'Quick access to applications that still need moderation attention.'}</p>
                 </div>
               </div>
@@ -655,7 +655,7 @@ export default function Admin() {
             <div className="card">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <h3 className="font-bold text-nanny-deepOrange">Application review</h3>
+                  <h3 className="font-bold text-nanny-deepOrange">{(language === 'ru' ? 'Проверка заявок' : language === 'kz' ? 'Өтінімдерді тексеру' : 'Application review')}</h3>
                   <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'В выбранном статусе заявок нет.' : language === 'kz' ? 'Таңдалған күйде өтінімдер жоқ.' : 'No applications in the selected status.'}</p>
                 </div>
                 <SelectInput
@@ -674,7 +674,7 @@ export default function Admin() {
               <div className="card">
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="font-bold text-nanny-deepOrange">Review queue</h3>
+                    <h3 className="font-bold text-nanny-deepOrange">{(language === 'ru' ? 'Очередь отзывов' : language === 'kz' ? 'Пікірлер кезегі' : 'Review queue')}</h3>
                     <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'Выберите заявку ситтера для проверки перед одобрением.' : language === 'kz' ? 'Мақұлдау алдында тексеру үшін ситтер өтінімін таңдаңыз.' : 'Choose a sitter application to inspect before approval.'}</p>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -965,8 +965,8 @@ export default function Admin() {
           <div className="card">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-nanny-deepOrange">Platform bookings</h3>
-                <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'Следите за всей активностью бронирований, включая сегодняшние активные услуги.' : language === 'kz' ? 'Бүгінгі белсенді қызметтерді қоса, барлық бронь белсенділігін бақылаңыз.' : 'Track all booking activity, including today’s active services.'}</p>
+                <h3 className="font-bold text-nanny-deepOrange">{(language === 'ru' ? 'Брони на платформе' : language === 'kz' ? 'Платформадағы брондаулар' : 'Platform bookings')}</h3>
+                <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'Следите за всей активностью бронирований, включая сегодняшние активные услуги.' : language === 'kz' ? 'Бүгінгі белсенді қызметтерді қоса, барлық брондау белсенділігін бақылаңыз.' : 'Track all booking activity, including today’s active services.'}</p>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
@@ -987,7 +987,7 @@ export default function Admin() {
           <div className="card">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-nanny-deepOrange">Booking queue</h3>
+                <h3 className="font-bold text-nanny-deepOrange">{(language === 'ru' ? 'Очередь броней' : language === 'kz' ? 'Брондаулар кезегі' : 'Booking queue')}</h3>
                 <p className="text-sm opacity-70 mt-1">{language === 'ru' ? 'Ищите по владельцу, ситтеру, питомцу или фокусируйтесь на сегодняшней активности.' : language === 'kz' ? 'Иесі, ситтері, жануары бойынша іздеңіз немесе бүгінгі белсенділікке назар аударыңыз.' : 'Search by owner, sitter, pet or focus on today’s activity.'}</p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1018,7 +1018,7 @@ export default function Admin() {
                 <article key={b.id} className="rounded-[26px] border border-nanny-orange/12 bg-[#fffdf9] p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.16em] opacity-45">{language === 'ru' ? 'Бронь' : language === 'kz' ? 'Бронь' : 'Booking'} #{b.id}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] opacity-45">{language === 'ru' ? 'Брондау' : language === 'kz' ? 'Брондау' : 'Booking'} #{b.id}</p>
                       <h4 className="mt-2 text-lg font-bold text-nanny-brownish">{b.pet_name}</h4>
                       <p className="mt-1 text-sm opacity-70 capitalize">{String(b.service || '').replace(/_/g, ' ')}</p>
                     </div>

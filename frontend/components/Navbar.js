@@ -185,7 +185,7 @@ export default function Navbar() {
                             <div className="flex items-center gap-2">
                               {unreadCount > 0 && (
                                 <span className="rounded-full bg-nanny-orange/10 px-2.5 py-1 text-[11px] font-semibold text-nanny-deepOrange">
-                                  {unreadCount} new
+                                  {unreadCount} {language === 'ru' ? 'новых' : language === 'kz' ? 'жаңа' : 'new'}
                                 </span>
                               )}
                               <button onClick={markAllRead} className="text-xs font-semibold text-nanny-blue">{t('shell', 'readAll', 'Read all')}</button>
@@ -251,7 +251,7 @@ export default function Navbar() {
                                         className="btn-secondary px-3 py-1.5 text-xs"
                                         onClick={(event) => { event.stopPropagation(); openNotification(notification, `/bookings?rebook=${notification.meta.booking_id}`); }}
                                       >
-                                        🔁 {language === 'ru' ? 'Повторить бронь' : language === 'kz' ? 'Қайта броньдау' : 'Book again'}
+                                        🔁 {language === 'ru' ? 'Повторить бронь' : language === 'kz' ? 'Қайта брондау' : 'Book again'}
                                       </button>
                                     </div>
                                   )}

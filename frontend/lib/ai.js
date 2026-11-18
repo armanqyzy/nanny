@@ -18,14 +18,14 @@ export function useAiEnabled() {
 
 const LABELS = {
   improvePet: {
-    ai: { en: 'Improve with AI', ru: 'Улучшить с ИИ', kz: 'ИИ арқылы жақсарту' },
+    ai: { en: 'Improve with AI', ru: 'Улучшить с ИИ', kz: 'ЖИ арқылы жақсарту' },
     hint: { en: 'Suggest a text', ru: 'Подсказать текст', kz: 'Мәтін ұсыну' },
   },
   careNotes: {
-    ai: { en: 'Generate with AI', ru: 'Сгенерировать с ИИ', kz: 'ИИ арқылы жасау' },
+    ai: { en: 'Generate with AI', ru: 'Сгенерировать с ИИ', kz: 'ЖИ арқылы жасау' },
     hint: { en: 'Fill from pet profile', ru: 'Заполнить по профилю питомца', kz: 'Жануар профилінен толтыру' },
   },
-  doneAi: { en: 'AI polished the text. You can still edit everything.', ru: 'ИИ улучшил текст. Всё можно отредактировать.', kz: 'ИИ мәтінді жақсартты. Бәрін өзгертуге болады.' },
+  doneAi: { en: 'AI polished the text. You can still edit everything.', ru: 'ИИ улучшил текст. Всё можно отредактировать.', kz: 'ЖИ мәтінді жақсартты. Бәрін өзгертуге болады.' },
   doneHint: { en: 'Added a template hint. Edit it to match your pet.', ru: 'Добавили шаблон-подсказку. Отредактируйте его под своего питомца.', kz: 'Үлгі-кеңес қосылды. Оны жануарыңызға сай өзгертіңіз.' },
 };
 

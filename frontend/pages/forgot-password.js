@@ -5,7 +5,7 @@ import { api } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 
 export default function ForgotPasswordPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -14,7 +14,7 @@ export default function ForgotPasswordPage() {
   async function submit(event) {
     event.preventDefault();
     if (!email.trim()) {
-      setError('Enter your email address.');
+      setError((language === 'ru' ? 'Введите email.' : language === 'kz' ? 'Email енгізіңіз.' : 'Enter your email address.'));
       return;
     }
 
@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
       const response = await api.post('/api/auth/forgot-password', { email: email.trim() });
       setMessage(response.message || t('auth', 'requestSent', 'If this email exists in Nanny, a reset link has been sent.'));
     } catch (_error) {
-      setError('Could not send the reset link right now. Please try again.');
+      setError((language === 'ru' ? 'Не удалось отправить ссылку. Попробуйте ещё раз.' : language === 'kz' ? 'Сілтемені жіберу мүмкін болмады. Қайталап көріңіз.' : 'Could not send the reset link right now. Please try again.'));
     } finally {
       setBusy(false);
     }
