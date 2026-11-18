@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/DashboardLayout';
 import { api, currentUser } from '../../lib/api';
 import PetUpdatesFeed from '../../components/PetUpdatesFeed';
+import BookingChecklist from '../../components/BookingChecklist';
 import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
 import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
@@ -510,6 +511,10 @@ export default function Bookings() {
               </>
             )}
           </div>
+
+          {['pending', 'confirmed', 'completed'].includes(b.status) && (
+            <BookingChecklist bookingId={b.id} role={role === 'sitter' ? 'sitter' : 'owner'} status={b.status} />
+          )}
 
           {['confirmed', 'completed'].includes(b.status) && (
             <div className="mt-5">

@@ -28,7 +28,7 @@ function useLabels() {
 }
 
 // Width / margin classes belong on the wrapper so the custom buttons line up with the field.
-const LAYOUT_CLASS = /^(w-|max-w-|min-w-|m-|mt-|mb-|ml-|mr-|mx-|my-|flex-|basis-|grow|shrink|col-|self-)/;
+const LAYOUT_CLASS = /^((sm|md|lg|xl):)?(w-|max-w-|min-w-|m-|mt-|mb-|ml-|mr-|mx-|my-|flex-|basis-|grow|shrink|col-|self-)/;
 function splitClasses(className = '') {
   const parts = className.split(/\s+/).filter(Boolean);
   return {

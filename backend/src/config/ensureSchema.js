@@ -11,6 +11,7 @@ const AUTO_MIGRATIONS = [
   '2026-11-17-batch4-telegram.sql',
   '2026-11-17-batch5-reminders.sql',
   '2026-11-18-batch6-reschedule-chat.sql',
+  '2026-11-18-batch7-checklist.sql',
 ];
 
 async function ensureSchema() {
