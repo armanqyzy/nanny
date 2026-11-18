@@ -509,9 +509,14 @@ export default function Bookings() {
             {role === 'sitter' && b.status === 'pending' && (
               <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'confirmed')} className="btn-primary text-sm">{t.confirm || 'Confirm'}</button>
             )}
-            {role === 'sitter' && b.status === 'confirmed' && (
+            {role === 'sitter' && b.status === 'confirmed' && (dayOf(b.start_date) <= todayInAppTimeZone() ? (
               <button disabled={busyBookingId === b.id} onClick={() => changeStatus(b.id, 'completed')} className="btn-secondary text-sm">{t.markCompleted || 'Mark completed'}</button>
-            )}
+            ) : (
+              <span className="inline-flex items-center rounded-2xl bg-nanny-cream px-4 py-2 text-sm text-nanny-brownish/70">
+                {language === 'ru' ? 'Завершить можно с ' : language === 'kz' ? 'Аяқтауға болады: ' : 'Can be completed from '}
+                {new Date(b.start_date).toLocaleDateString(localeFor(language), { day: 'numeric', month: 'long', timeZone: 'Asia/Almaty' })}
+              </span>
+            ))}
             {['pending', 'confirmed'].includes(b.status) && (
               <>
                 {role === 'owner' && dayOf(b.start_date) >= todayInAppTimeZone() && (
