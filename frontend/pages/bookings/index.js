@@ -336,77 +336,74 @@ export default function Bookings() {
     const contactName = role === 'owner' ? b.sitter_name : b.owner_name;
     const contactLabel = role === 'owner' ? (t.sitter || 'Sitter') : (t.owner || 'Owner');
     const serviceLabel = serviceName(b.service, language);
+    const open = Boolean(expandedIds[b.id]);
+    const shortDates = formatDateRange(b.start_date, b.end_date, language);
+    const unpaid = !b.payment_status || b.payment_status === 'unpaid';
+    const attention = role === 'sitter' && b.status === 'pending'
+      ? { text: language === 'ru' ? 'Ждёт вашего ответа' : language === 'kz' ? 'Жауабыңызды күтуде' : 'Waiting for your answer', className: 'bg-[#fff1cf] text-[#8d5c0b]' }
+      : role === 'owner' && b.status === 'confirmed' && unpaid
+        ? { text: language === 'ru' ? 'Можно оплатить' : language === 'kz' ? 'Төлеуге болады' : 'Ready to pay', className: 'bg-nanny-blue/10 text-nanny-blue' }
+        : role === 'owner' && b.status === 'completed' && !b.has_review && dayOf(b.end_date) <= todayInAppTimeZone()
+          ? { text: language === 'ru' ? 'Оставьте отзыв' : language === 'kz' ? 'Пікір қалдырыңыз' : 'Leave a review', className: 'bg-[#e7f8ec] text-green-700' }
+          : null;
 
     return (
-      <div className="overflow-hidden rounded-[30px] border border-nanny-orange/12 bg-white shadow-card">
-        <div className="border-b border-nanny-orange/10 bg-gradient-to-r from-white to-[#fff7ee] px-6 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-nanny-brownish/45">{contactLabel}</p>
-              <div className="mt-2 text-xl font-bold leading-tight text-nanny-brownish md:text-[30px] md:leading-none">{contactName}</div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-nanny-brownish/70">
-                <span className="rounded-full bg-nanny-cream px-3 py-1 capitalize">{serviceLabel}</span>
-                <span className="opacity-40">•</span>
-                <span>{t.pet || 'Pet'}: {b.pet_name}</span>
-              </div>
-            </div>
-            <span className={`badge shrink-0 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] ${STATUS_STYLES[b.status]}`}>{(STATUS_NAMES[language] || STATUS_NAMES.en)[b.status] || b.status}</span>
-          </div>
-          <div className="mt-3 md:hidden">
-            <p className="text-sm font-semibold text-nanny-brownish">
-              {formatDateRange(b.start_date, b.end_date, language)}
-              {b.start_time ? ` · ${String(b.start_time).slice(0, 5)}` : ''}
-              {' · '}{Number(b.total_price).toLocaleString()} ₸
-            </p>
-            {role === 'sitter' && b.status === 'pending' && (
-              <p className="mt-2 inline-flex rounded-full bg-[#fff1cf] px-3 py-1 text-xs font-semibold text-[#8d5c0b]">
-                {language === 'ru' ? 'Ждёт вашего ответа' : language === 'kz' ? 'Жауабыңызды күтуде' : 'Waiting for your answer'}
-              </p>
-            )}
-            {role === 'owner' && b.status === 'confirmed' && (!b.payment_status || b.payment_status === 'unpaid') && (
-              <p className="mt-2 inline-flex rounded-full bg-nanny-blue/10 px-3 py-1 text-xs font-semibold text-nanny-blue">
-                {language === 'ru' ? 'Можно оплатить' : language === 'kz' ? 'Төлеуге болады' : 'Ready to pay'}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => toggleExpanded(b.id)}
-              aria-expanded={Boolean(expandedIds[b.id])}
-              className="mt-3 flex w-full items-center justify-center gap-1 rounded-2xl border border-nanny-orange/20 bg-white py-2 text-sm font-semibold text-nanny-blue"
-            >
-              {expandedIds[b.id]
-                ? (language === 'ru' ? 'Свернуть ▴' : language === 'kz' ? 'Жасыру ▴' : 'Hide ▴')
-                : (language === 'ru' ? 'Подробнее и действия ▾' : language === 'kz' ? 'Толығырақ ▾' : 'Details and actions ▾')}
-            </button>
-          </div>
-        </div>
-        <div className={`px-6 py-5 ${expandedIds[b.id] ? '' : 'hidden md:block'}`}>
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-nanny-orange/10 bg-[#fffaf3] p-4">
-              <div className="flex items-center gap-2 text-nanny-deepOrange">
-                <Icon name="calendar" className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-[0.16em] font-semibold">{t.dates || 'Dates'}</span>
-              </div>
-              <p className="mt-3 text-sm font-semibold text-nanny-brownish">{formatDateRange(b.start_date, b.end_date, language)}</p>
-            </div>
-            <div className="rounded-2xl border border-nanny-orange/10 bg-[#fffaf3] p-4">
-              <div className="flex items-center gap-2 text-nanny-deepOrange">
-                <Icon name="clock" className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-[0.16em] font-semibold">{t.time || 'Time'}</span>
-              </div>
-              <p className="mt-3 text-sm font-semibold text-nanny-brownish">
-                {b.start_time && b.end_time ? `${String(b.start_time).slice(0, 5)} → ${String(b.end_time).slice(0, 5)}` : (t.timeNotSpecified || 'Time not specified')}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-nanny-orange/10 bg-[#fffaf3] p-4">
-              <div className="flex items-center gap-2 text-nanny-deepOrange">
-                <Icon name="wallet" className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-[0.16em] font-semibold">{t.total || 'Total'}</span>
-              </div>
-              <p className="mt-3 text-sm font-semibold text-nanny-brownish">{Number(b.total_price).toLocaleString()} ₸</p>
-            </div>
-          </div>
+      <div className={`overflow-hidden rounded-[26px] border bg-white transition ${open ? 'border-nanny-orange/30 shadow-card' : 'border-nanny-orange/12 shadow-[0_6px_18px_rgba(122,75,31,0.06)] hover:border-nanny-orange/30 hover:shadow-card'}`}>
+        <button
+          type="button"
+          onClick={() => toggleExpanded(b.id)}
+          aria-expanded={open}
+          className={`flex w-full items-center gap-4 px-4 py-4 text-left sm:px-5 ${open ? 'border-b border-nanny-orange/10 bg-gradient-to-r from-white to-[#fff7ee]' : ''}`}
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fff1e2] font-display text-lg font-bold text-nanny-deepOrange">
+            {(contactName || '?').trim().charAt(0).toUpperCase()}
+          </span>
 
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="truncate text-base font-bold text-nanny-brownish sm:text-lg">{contactName}</span>
+              <span className="text-xs uppercase tracking-[0.14em] text-nanny-brownish/40">{contactLabel}</span>
+            </span>
+            <span className="mt-0.5 block truncate text-sm text-nanny-brownish/65">
+              <span className="capitalize">{serviceLabel}</span> · {b.pet_name}
+              <span className="lg:hidden"> · {shortDates}</span>
+            </span>
+            {attention && (
+              <span className={`mt-1.5 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${attention.className}`}>{attention.text}</span>
+            )}
+          </span>
+
+          <span className="hidden shrink-0 items-center gap-5 text-sm lg:flex">
+            <span className="flex items-center gap-1.5 text-nanny-brownish/80">
+              <Icon name="calendar" className="h-4 w-4 text-nanny-deepOrange" />
+              {shortDates}
+            </span>
+            {b.start_time && (
+              <span className="flex items-center gap-1.5 text-nanny-brownish/80">
+                <Icon name="clock" className="h-4 w-4 text-nanny-deepOrange" />
+                {String(b.start_time).slice(0, 5)}{b.end_time ? `–${String(b.end_time).slice(0, 5)}` : ''}
+              </span>
+            )}
+            <span className="w-24 text-right font-bold text-nanny-brownish">{Number(b.total_price).toLocaleString()} ₸</span>
+          </span>
+
+          <span className={`badge hidden shrink-0 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] sm:inline-flex ${STATUS_STYLES[b.status]}`}>
+            {(STATUS_NAMES[language] || STATUS_NAMES.en)[b.status] || b.status}
+          </span>
+          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#fff1e2] text-nanny-deepOrange transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+          </span>
+        </button>
+        {open && (
+        <div className="px-5 py-5 sm:px-6">
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-sm sm:hidden">
+            <span className={`badge px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] ${STATUS_STYLES[b.status]}`}>{(STATUS_NAMES[language] || STATUS_NAMES.en)[b.status] || b.status}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm lg:hidden">
+            <span className="rounded-full bg-[#fffaf3] px-3 py-1.5 font-semibold">{formatDateRange(b.start_date, b.end_date, language)}</span>
+            {b.start_time && <span className="rounded-full bg-[#fffaf3] px-3 py-1.5 font-semibold">{String(b.start_time).slice(0, 5)}{b.end_time ? ` → ${String(b.end_time).slice(0, 5)}` : ''}</span>}
+            <span className="rounded-full bg-[#fffaf3] px-3 py-1.5 font-semibold">{Number(b.total_price).toLocaleString()} ₸</span>
+          </div>
           {b.rescheduled_from_start && b.status !== 'cancelled' && (
             <p className="mt-3 inline-flex rounded-full bg-nanny-blue/10 px-3 py-1 text-xs font-semibold text-nanny-blue">
               {language === 'ru' ? 'Перенесено с ' : language === 'kz' ? 'Ауыстырылды: ' : 'Moved from '}
@@ -556,6 +553,7 @@ export default function Bookings() {
             </div>
           )}
         </div>
+        )}
       </div>
     );
   }
@@ -618,7 +616,7 @@ export default function Bookings() {
           <p className="mt-1 text-sm text-nanny-brownish/70">{t.ownerText || 'Requests you created for your pets.'}</p>
         </div>
       </div>
-      <div className="grid xl:grid-cols-2 gap-5">
+      <div className="space-y-3">
         {data.asOwner.filter((b) => filter === 'all' || b.status === filter).length ? data.asOwner.filter((b) => filter === 'all' || b.status === filter).map((b) => <Card key={b.id} b={b} role="owner" />)
           : <div className="xl:col-span-2"><EmptyState
               title={(language === 'ru' ? 'Бронирований пока нет' : language === 'kz' ? 'Брондаулар әлі жоқ' : 'No bookings yet')}
@@ -638,7 +636,7 @@ export default function Bookings() {
               <p className="mt-1 text-sm text-nanny-brownish/70">{t.sitterText || 'Active care requests where you are the service provider.'}</p>
             </div>
           </div>
-          <div className="grid xl:grid-cols-2 gap-5">
+          <div className="space-y-3">
             {data.asSitter.filter((b) => filter === 'all' || b.status === filter).length
               ? data.asSitter.filter((b) => filter === 'all' || b.status === filter).map((b) => <Card key={b.id} b={b} role="sitter" />)
               : <div className="xl:col-span-2"><EmptyState
