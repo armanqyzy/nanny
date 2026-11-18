@@ -627,7 +627,7 @@ export default function Bookings() {
           >
             <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nanny-orange font-display text-lg font-bold text-white">
               {(g.name || '?').trim().charAt(0).toUpperCase()}
-              <span className="absolute -bottom-1 -right-1 grid h-5 min-w-[20px] place-items-center rounded-full border-2 border-white bg-nanny-blue px-1 text-[10px] font-bold">
+              <span className="absolute -bottom-1 -right-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-white bg-nanny-blue px-1 font-body text-[11px] font-bold leading-none tabular-nums">
                 {g.items.length}
               </span>
             </span>
