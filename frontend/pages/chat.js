@@ -116,6 +116,8 @@ export default function Chat() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [threadSearch, setThreadSearch] = useState('');
+  // Admins can also find people they have never chatted with.
+  const [allUsers, setAllUsers] = useState([]);
   const [messageSearch, setMessageSearch] = useState('');
   const [messageSearchOpen, setMessageSearchOpen] = useState(false);
   const [supportLoading, setSupportLoading] = useState(false);
@@ -305,6 +307,26 @@ export default function Chat() {
     if (!messageSearchOpen) return;
     messageSearchInputRef.current?.focus();
   }, [messageSearchOpen]);
+
+  useEffect(() => {
+    if (me?.role !== 'admin') return;
+    api.get('/api/admin/users').then((rows) => setAllUsers(rows || [])).catch(() => setAllUsers([]));
+  }, [me?.role]);
+
+  function startChatWithUser(user) {
+    const starterThread = {
+      id: user.id,
+      full_name: user.full_name,
+      avatar_url: user.avatar_url,
+      role: user.role,
+      phone: user.phone,
+      last_message: t.startConversation || 'Start the conversation',
+    };
+    setThreads((prev) => [starterThread, ...prev.filter((thread) => thread.id !== starterThread.id)]);
+    setActive(starterThread);
+    setThreadSearch('');
+    setMobileShowList(false);
+  }
 
   function pickThread(thread) {
     setActive(thread);
@@ -530,6 +552,22 @@ export default function Chat() {
       .some((value) => String(value).toLowerCase().includes(q));
   });
 
+  const otherUsers = (() => {
+    const q = threadSearch.trim().toLowerCase();
+    if (me?.role !== 'admin' || q.length < 2) return [];
+    return allUsers
+      .filter((user) => user.id !== me.id && !threads.some((thread) => thread.id === user.id))
+      .filter((user) => [user.full_name, user.email, user.phone]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q)))
+      .slice(0, 8);
+  })();
+  const roleName = (role) => ({
+    owner: language === 'ru' ? 'Владелец' : language === 'kz' ? 'Иесі' : 'Owner',
+    sitter: language === 'ru' ? 'Ситтер' : language === 'kz' ? 'Ситтер' : 'Sitter',
+    admin: language === 'ru' ? 'Админ' : language === 'kz' ? 'Әкімші' : 'Admin',
+  }[role] || role);
+
   const visibleMessages = messages.filter((message) => {
     const q = messageSearch.trim().toLowerCase();
     if (!q) return true;
@@ -563,7 +601,9 @@ export default function Chat() {
                 </span>
                 <input
                   className="input pl-12"
-                  placeholder={t.search || 'Search'}
+                  placeholder={me?.role === 'admin'
+                    ? (language === 'ru' ? 'Поиск по диалогам и пользователям' : language === 'kz' ? 'Диалогтар мен қолданушылардан іздеу' : 'Search chats and users')
+                    : (t.search || 'Search')}
                   value={threadSearch}
                   onChange={(e) => setThreadSearch(e.target.value)}
                 />
@@ -612,7 +652,7 @@ export default function Chat() {
               </button>
             )}
 
-            {filteredThreads.length === 0 && threadSearch.trim() && <p className="p-4 text-sm opacity-60">{t.noConversations || 'No conversations match your search.'}</p>}
+            {filteredThreads.length === 0 && otherUsers.length === 0 && threadSearch.trim() && <p className="p-4 text-sm opacity-60">{t.noConversations || 'No conversations match your search.'}</p>}
             {filteredThreads.length === 0 && !threadSearch.trim() && (
               <EmptyState
                 compact
@@ -675,6 +715,39 @@ export default function Chat() {
                 </button>
               ))}
             </div>
+
+            {otherUsers.length > 0 && (
+              <div className="mt-4">
+                <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-nanny-brownish/50">
+                  {language === 'ru' ? 'Другие пользователи' : language === 'kz' ? 'Басқа қолданушылар' : 'Other users'}
+                </p>
+                <div className="space-y-1">
+                  {otherUsers.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => startChatWithUser(user)}
+                      className="group flex w-full items-center gap-3 rounded-[20px] border border-dashed border-nanny-orange/25 bg-white/60 px-3 py-2.5 text-left transition hover:border-nanny-orange hover:bg-white"
+                    >
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#fff1e2] text-sm font-bold text-nanny-deepOrange">
+                        {(user.full_name || '?').trim().slice(0, 2).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate font-semibold">{user.full_name}</span>
+                          <span className="shrink-0 rounded-full bg-nanny-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-nanny-brownish/70">{roleName(user.role)}</span>
+                          {user.is_blocked && <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">{language === 'ru' ? 'Заблокирован' : language === 'kz' ? 'Бұғатталған' : 'Blocked'}</span>}
+                        </span>
+                        <span className="block truncate text-xs opacity-60">{user.email}</span>
+                      </span>
+                      <span className="shrink-0 rounded-xl bg-nanny-blue/10 px-3 py-1.5 text-xs font-semibold text-nanny-blue transition group-hover:bg-nanny-blue group-hover:text-white">
+                        {language === 'ru' ? 'Написать' : language === 'kz' ? 'Жазу' : 'Message'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </aside>
 
