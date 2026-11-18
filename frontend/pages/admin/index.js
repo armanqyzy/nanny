@@ -6,6 +6,7 @@ import { SHOP_ORDER_STATUSES, handleProductImageError } from '../../lib/shop';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useLanguage } from '../../lib/i18n';
 import AdminActionLog from '../../components/AdminActionLog';
+import { NumberInput } from '../../components/FancyInputs';
 
 const REVIEW_STATUSES = ['new', 'in_review', 'approved', 'changes_requested', 'rejected'];
 
@@ -1105,17 +1106,15 @@ export default function Admin() {
                 <option value="toy">{language === 'ru' ? 'Игрушка' : language === 'kz' ? 'Ойыншық' : 'Toy'}</option>
                 <option value="other">{language === 'ru' ? 'Другое' : language === 'kz' ? 'Басқа' : 'Other'}</option>
               </select>
-              <input
+              <NumberInput
                 className="input"
-                type="number"
                 min="0"
                 placeholder={language === 'ru' ? 'Цена' : language === 'kz' ? 'Баға' : 'Price'}
                 value={productForm.price}
                 onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
               />
-              <input
+              <NumberInput
                 className="input"
-                type="number"
                 min="0"
                 placeholder={language === 'ru' ? 'Остаток' : language === 'kz' ? 'Қалдық' : 'Stock'}
                 value={productForm.stock}

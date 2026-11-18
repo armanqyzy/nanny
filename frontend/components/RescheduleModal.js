@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
 import { todayInAppTimeZone } from '../lib/date';
+import { DateInput, TimeInput } from './FancyInputs';
 
 const TEXT = {
   title: { en: 'Move booking', ru: 'Перенос бронирования', kz: 'Брондауды ауыстыру' },
@@ -83,20 +84,20 @@ export default function RescheduleModal({ booking, language, onClose, onDone }) 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="text-sm font-semibold text-nanny-brownish">
             {tx('start', language)}
-            <input type="date" className="input mt-1" min={todayInAppTimeZone()} value={form.start_date} onChange={(e) => setStart(e.target.value)} />
+            <DateInput className="input mt-1" min={todayInAppTimeZone()} value={form.start_date} onChange={(e) => setStart(e.target.value)} />
           </label>
           <label className="text-sm font-semibold text-nanny-brownish">
             {tx('end', language)}
-            <input type="date" className="input mt-1" min={form.start_date} value={form.end_date} disabled={paid}
+            <DateInput className="input mt-1" min={form.start_date} value={form.end_date} disabled={paid}
               onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
           </label>
           <label className="text-sm font-semibold text-nanny-brownish">
             {tx('from', language)}
-            <input type="time" className="input mt-1" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+            <TimeInput className="input mt-1" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
           </label>
           <label className="text-sm font-semibold text-nanny-brownish">
             {tx('to', language)}
-            <input type="time" className="input mt-1" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+            <TimeInput className="input mt-1" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
           </label>
         </div>
         <p className="mt-2 text-xs opacity-60">{tx('timeHint', language)}</p>

@@ -8,6 +8,7 @@ import { aiDoneMessage, aiLabel, useAiEnabled } from '../../lib/ai';
 import { useLanguage } from '../../lib/i18n';
 import { petSummaryLine } from '../../lib/pets';
 import PetVaccinationsModal from '../../components/PetVaccinationsModal';
+import { NumberInput } from '../../components/FancyInputs';
 
 const EMPTY = {
   name: '', pet_type: 'dog', gender: 'boy', age: '',
@@ -480,7 +481,7 @@ export default function Pets() {
                         </div>
                       </div>
                       <div>
-                        <input className={`input ${fieldErrors.age ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="number" min="0" max="100" step="1" placeholder={t.age || 'Age (years)'}
+                        <NumberInput className={`input ${fieldErrors.age ? 'border-red-300 ring-2 ring-red-100' : ''}`} min="0" max="100" step="1" placeholder={t.age || 'Age (years)'}
                                value={form.age} onChange={(e) => {
                                  setForm({ ...form, age: e.target.value });
                                  clearFieldError('age');

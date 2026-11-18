@@ -100,3 +100,37 @@ h1, h2, h3, h4, h5, h6 { @apply font-display; }
     transform: translateY(0);
   }
 }
+
+/* ---------- Pretty form controls (see components/FancyInputs.js) ---------- */
+
+/* Hide the browser's default number arrows; NumberInput draws its own. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Fallback for any native date/time input left anywhere: orange icon instead of the grey one. */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+  filter: invert(55%) sepia(80%) saturate(900%) hue-rotate(345deg) brightness(98%);
+}
+
+.fancy-pop {
+  animation: fancy-pop-in 0.16s ease-out both;
+  transform-origin: top left;
+}
+@keyframes fancy-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fancy-scroll { scrollbar-width: thin; scrollbar-color: rgba(242, 154, 77, 0.45) transparent; }
+.fancy-scroll::-webkit-scrollbar { width: 6px; }
+.fancy-scroll::-webkit-scrollbar-thumb { background: rgba(242, 154, 77, 0.45); border-radius: 999px; }

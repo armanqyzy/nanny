@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { todayInAppTimeZone } from '../lib/date';
+import { DateInput } from './FancyInputs';
 
 const TEXT = {
   en: {
@@ -103,7 +104,7 @@ export default function SitterAvailabilityPanel({ sitter, language = 'en', onSit
           ))}
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input className="input max-w-[200px]" type="date" min={todayInAppTimeZone()} value={newDay} onChange={(e) => setNewDay(e.target.value)} />
+          <DateInput className="input max-w-[200px]" min={todayInAppTimeZone()} value={newDay} onChange={(e) => setNewDay(e.target.value)} />
           <button type="button" className="btn-ghost text-sm" onClick={addDay} disabled={!newDay}>{t.addDay}</button>
           <button type="button" className="btn-secondary text-sm" onClick={saveDays} disabled={busy}>{t.save}</button>
         </div>

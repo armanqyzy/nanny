@@ -14,6 +14,7 @@ import CancelBookingModal from '../../components/CancelBookingModal';
 import RescheduleModal from '../../components/RescheduleModal';
 import { POLICY_TEXT, cancelReasonLabel } from '../../lib/cancellation';
 import { localeFor, serviceName } from '../../lib/services';
+import { DateInput, TimeInput } from '../../components/FancyInputs';
 
 const EMPTY_PAYMENT = EMPTY_CARD;
 
@@ -768,10 +769,10 @@ export default function Bookings() {
               <button className="btn-ghost" onClick={() => setRebookBooking(null)}>{t.close || 'Close'}</button>
             </div>
             <div className="mt-5 grid gap-3 rounded-2xl bg-nanny-cream/45 p-5 md:grid-cols-2">
-              <input className="input" type="date" min={todayInAppTimeZone()} value={rebookForm.start_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, start_date: e.target.value }))} />
-              <input className="input" type="date" min={rebookForm.start_date || todayInAppTimeZone()} value={rebookForm.end_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, end_date: e.target.value }))} />
-              <input className="input" type="time" value={rebookForm.start_time} onChange={(e) => setRebookForm((prev) => ({ ...prev, start_time: e.target.value }))} />
-              <input className="input" type="time" value={rebookForm.end_time} onChange={(e) => setRebookForm((prev) => ({ ...prev, end_time: e.target.value }))} />
+              <DateInput className="input" min={todayInAppTimeZone()} value={rebookForm.start_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, start_date: e.target.value }))} />
+              <DateInput className="input" min={rebookForm.start_date || todayInAppTimeZone()} value={rebookForm.end_date} onChange={(e) => setRebookForm((prev) => ({ ...prev, end_date: e.target.value }))} />
+              <TimeInput className="input" value={rebookForm.start_time} onChange={(e) => setRebookForm((prev) => ({ ...prev, start_time: e.target.value }))} />
+              <TimeInput className="input" value={rebookForm.end_time} onChange={(e) => setRebookForm((prev) => ({ ...prev, end_time: e.target.value }))} />
               {rebookMessage && (
                 <p className={`md:col-span-2 text-sm ${rebookMessage.includes('successfully') ? 'text-green-700' : 'text-red-600'}`}>{rebookMessage}</p>
               )}

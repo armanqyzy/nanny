@@ -9,6 +9,7 @@ import { nowTimeInAppTimeZone, todayInAppTimeZone } from '../../lib/date';
 import { petSummaryLine } from '../../lib/pets';
 import { serviceName } from '../../lib/services';
 import { aiDoneMessage, aiLabel, useAiEnabled } from '../../lib/ai';
+import { DateInput, TimeInput } from '../../components/FancyInputs';
 
 const SERVICE_HINTS = {
   en: {
@@ -538,7 +539,7 @@ export default function SitterPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.startDate || 'Start date'}</label>
                 <p className="mb-2 text-xs opacity-65">{t.firstCareDay || 'The first day the sitter should begin care.'}</p>
-                <input className={`input ${fieldErrors.start_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.start_date} min={todayInAppTimeZone()}
+                <DateInput className={`input ${fieldErrors.start_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} value={book.start_date} min={todayInAppTimeZone()}
                        onChange={(e) => {
                          setBook({ ...book, start_date: e.target.value });
                          clearFieldError('start_date');
@@ -549,7 +550,7 @@ export default function SitterPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.endDate || 'End date'}</label>
                 <p className="mb-2 text-xs opacity-65">{t.lastCareDay || 'The last day included in this booking.'}</p>
-                <input className={`input ${fieldErrors.end_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="date" value={book.repeat_on ? book.start_date : book.end_date} disabled={book.repeat_on} min={book.start_date || todayInAppTimeZone()}
+                <DateInput className={`input ${fieldErrors.end_date ? 'border-red-300 ring-2 ring-red-100' : ''}`} value={book.repeat_on ? book.start_date : book.end_date} disabled={book.repeat_on} min={book.start_date || todayInAppTimeZone()}
                        onChange={(e) => {
                          setBook({ ...book, end_date: e.target.value });
                          clearFieldError('end_date');
@@ -560,7 +561,7 @@ export default function SitterPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.startTime || 'Start time'}</label>
                 <p className="mb-2 text-xs opacity-65">{t.startTimeHint || 'Optional. Useful for walks, visits or a specific handoff time.'}</p>
-                <input className={`input ${fieldErrors.time ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="time" value={book.start_time}
+                <TimeInput className={`input ${fieldErrors.time ? 'border-red-300 ring-2 ring-red-100' : ''}`} value={book.start_time}
                        onChange={(e) => {
                          setBook({ ...book, start_time: e.target.value });
                          clearFieldError('time');
@@ -570,7 +571,7 @@ export default function SitterPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-nanny-deepOrange">{t.endTime || 'End time'}</label>
                 <p className="mb-2 text-xs opacity-65">{t.endTimeHint || 'Optional. Add it if the booking has a clear finish time.'}</p>
-                <input className={`input ${fieldErrors.time ? 'border-red-300 ring-2 ring-red-100' : ''}`} type="time" value={book.end_time}
+                <TimeInput className={`input ${fieldErrors.time ? 'border-red-300 ring-2 ring-red-100' : ''}`} value={book.end_time}
                        onChange={(e) => {
                          setBook({ ...book, end_time: e.target.value });
                          clearFieldError('time');

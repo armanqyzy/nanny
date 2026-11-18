@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { DateInput } from './FancyInputs';
 
 const TEXT = {
   en: {
@@ -98,10 +99,10 @@ export default function PetVaccinationsModal({ pet, language = 'en', onClose, on
           <input className="input" placeholder={t.name} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs opacity-70">{t.given}
-              <input className="input mt-1" type="date" max={today} value={form.given_on} onChange={(e) => setForm({ ...form, given_on: e.target.value })} />
+              <DateInput className="input mt-1" max={today} value={form.given_on} onChange={(e) => setForm({ ...form, given_on: e.target.value })} />
             </label>
             <label className="text-xs opacity-70">{t.next}
-              <input className="input mt-1" type="date" value={form.next_due} onChange={(e) => setForm({ ...form, next_due: e.target.value })} />
+              <DateInput className="input mt-1" value={form.next_due} onChange={(e) => setForm({ ...form, next_due: e.target.value })} />
             </label>
           </div>
           <input className="input" placeholder={t.notes} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />

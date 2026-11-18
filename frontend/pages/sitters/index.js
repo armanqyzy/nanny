@@ -10,6 +10,7 @@ import { useLanguage } from '../../lib/i18n';
 import { buildSitterRouteQuery, parseMapStateFromQuery } from '../../lib/sitterMapState';
 import { formatRating } from '../../lib/rating';
 import EmptyState from '../../components/EmptyState';
+import { NumberInput } from '../../components/FancyInputs';
 
 const INITIAL_FILTERS = {
   city: '',
@@ -293,10 +294,10 @@ export default function SittersList() {
             <option value="home_visit">{copy.homeVisit}</option>
             <option value="grooming">{copy.grooming}</option>
           </select>
-          <input className="input" type="number" step="0.1" placeholder={copy.minRating}
+          <NumberInput className="input" step="0.1" placeholder={copy.minRating}
                  value={filters.min_rating}
                  onChange={(e) => setFilters({ ...filters, min_rating: e.target.value })} />
-          <input className="input" type="number" placeholder={copy.maxPrice}
+          <NumberInput className="input" placeholder={copy.maxPrice}
                  value={filters.max_price}
                  onChange={(e) => setFilters({ ...filters, max_price: e.target.value })} />
           <label className="input flex items-center gap-3 md:col-span-2">

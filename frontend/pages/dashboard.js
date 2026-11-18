@@ -13,6 +13,7 @@ import EmptyState from '../components/EmptyState';
 import OnboardingGuide from '../components/OnboardingGuide';
 import { avatarFallback } from '../lib/avatars';
 import TelegramConnectCard from '../components/TelegramConnectCard';
+import { NumberInput, TimeInput } from '../components/FancyInputs';
 
 const DEFAULT_SITTER_SERVICES = [
   'walking',
@@ -1134,11 +1135,11 @@ export default function Dashboard() {
                 />
                 <input className="input" placeholder={t.city || 'City'} value={sitterForm.city} onChange={(e) => setSitterForm((prev) => ({ ...prev, city: e.target.value }))} />
                 <input className="input" placeholder={t.district || 'District'} value={sitterForm.district} onChange={(e) => setSitterForm((prev) => ({ ...prev, district: e.target.value }))} />
-                <input className="input" type="number" placeholder={t.basePrice || 'Base price per day'} value={sitterForm.price_per_day} onChange={(e) => setSitterForm((prev) => ({ ...prev, price_per_day: e.target.value }))} />
-                <input className="input" type="number" placeholder={t.serviceRadius || 'Service radius (km)'} value={sitterForm.service_radius_km} onChange={(e) => setSitterForm((prev) => ({ ...prev, service_radius_km: e.target.value }))} />
+                <NumberInput className="input" placeholder={t.basePrice || 'Base price per day'} value={sitterForm.price_per_day} onChange={(e) => setSitterForm((prev) => ({ ...prev, price_per_day: e.target.value }))} />
+                <NumberInput className="input" placeholder={t.serviceRadius || 'Service radius (km)'} value={sitterForm.service_radius_km} onChange={(e) => setSitterForm((prev) => ({ ...prev, service_radius_km: e.target.value }))} />
                 <input className="input md:col-span-2" placeholder={t.serviceZones || 'Service zones / pickup areas'} value={sitterForm.service_area_text} onChange={(e) => setSitterForm((prev) => ({ ...prev, service_area_text: e.target.value }))} />
-                <input className="input" type="time" value={sitterForm.work_start} onChange={(e) => setSitterForm((prev) => ({ ...prev, work_start: e.target.value }))} />
-                <input className="input" type="time" value={sitterForm.work_end} onChange={(e) => setSitterForm((prev) => ({ ...prev, work_end: e.target.value }))} />
+                <TimeInput className="input" value={sitterForm.work_start} onChange={(e) => setSitterForm((prev) => ({ ...prev, work_start: e.target.value }))} />
+                <TimeInput className="input" value={sitterForm.work_end} onChange={(e) => setSitterForm((prev) => ({ ...prev, work_end: e.target.value }))} />
               </div>
 
               <div className="mt-4">
@@ -1192,9 +1193,8 @@ export default function Dashboard() {
               {servicesForm.map((item, index) => (
                 <div key={item.service} className="rounded-2xl border border-nanny-orange/15 bg-white p-4">
                   <p className="font-semibold capitalize">{item.service.replace('_', ' ')}</p>
-                  <input
+                  <NumberInput
                     className="input mt-3"
-                    type="number"
                     placeholder={t.price || 'Price'}
                     value={item.price}
                     onChange={(e) => {

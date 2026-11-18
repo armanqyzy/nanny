@@ -6,6 +6,7 @@ import { absoluteAssetUrl, api, currentUser } from '../../lib/api';
 import { STORE_INFO, handleProductImageError } from '../../lib/shop';
 import Icon from '../../components/Icon';
 import { useLanguage } from '../../lib/i18n';
+import { NumberInput } from '../../components/FancyInputs';
 
 export default function Shop() {
   const { language } = useLanguage();
@@ -272,9 +273,8 @@ export default function Shop() {
               />
               {copy.onlyAvailable}
             </label>
-            <input
+            <NumberInput
               className="input w-44"
-              type="number"
               min="0"
               placeholder={copy.maxPrice}
               value={maxPrice}
