@@ -2,14 +2,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
 import { currentUser, clearSession, api } from '../lib/api';
-import { io } from 'socket.io-client';
+import { acquireSocket, closeSocket, releaseSocket } from '../lib/socket';
 import Icon from './Icon';
 import BrandLogo from './BrandLogo';
 import LanguageSwitcher from './LanguageSwitcher';
 import HeaderSearch from './HeaderSearch';
 import { useLanguage } from '../lib/i18n';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 function getNotificationHref(notification) {
   const meta = notification?.meta || {};
@@ -49,12 +48,17 @@ export default function Navbar() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('nanny_token') : null;
     if (!sessionUser || !token) return undefined;
 
-    const socket = io(SOCKET_URL, { auth: { token } });
-    socket.on('notification:new', (notification) => {
+    const socket = acquireSocket();
+    if (!socket) return undefined;
+    const onNotification = (notification) => {
       setNotifications((prev) => [notification, ...prev.filter((item) => item.id !== notification.id)]);
-    });
+    };
+    socket.on('notification:new', onNotification);
 
-    return () => socket.disconnect();
+    return () => {
+      socket.off('notification:new', onNotification);
+      releaseSocket();
+    };
   }, []);
 
   useEffect(() => {
@@ -77,6 +81,7 @@ export default function Navbar() {
   }, []);
 
   function logout() {
+    closeSocket();
     clearSession();
     setUser(null);
     router.push('/');

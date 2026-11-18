@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import { acquireSocket, releaseSocket } from '../lib/socket';
+import useVisible from '../lib/useVisible';
 import { api } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 import { TimeInput } from './FancyInputs';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 const COPY = {
   en: {
@@ -93,6 +93,8 @@ export default function BookingChecklist({ bookingId, role, status }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Loads only when the card scrolls into view (the bookings page can have dozens of cards).
+  const [rootRef, visible] = useVisible(false);
   const [form, setForm] = useState({ title: '', due_time: '' });
   const [adding, setAdding] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -104,23 +106,26 @@ export default function BookingChecklist({ bookingId, role, status }) {
   const showProgress = status !== 'pending';
 
   useEffect(() => {
+    if (!visible) return undefined;
     let active = true;
     api.get(`/api/bookings/${bookingId}/checklist`)
       .then((data) => { if (active) setItems(data || []); })
       .catch((err) => { if (active) setError(err.message); })
       .finally(() => { if (active) setLoading(false); });
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('nanny_token') : null;
-    const socket = io(SOCKET_URL, { auth: { token } });
-    socket.on('checklist:update', (payload) => {
+    const socket = acquireSocket();
+    if (!socket) return () => { active = false; };
+    const onUpdate = (payload) => {
       if (Number(payload?.booking_id) === Number(bookingId)) setItems(payload.items || []);
-    });
+    };
+    socket.on('checklist:update', onUpdate);
 
     return () => {
       active = false;
-      socket.disconnect();
+      socket.off('checklist:update', onUpdate);
+      releaseSocket();
     };
-  }, [bookingId]);
+  }, [bookingId, visible]);
 
   async function addItem(title = form.title, dueTime = form.due_time) {
     if (!title.trim()) return;
@@ -183,7 +188,7 @@ export default function BookingChecklist({ bookingId, role, status }) {
   const formVisible = canEdit && (formOpen || (!loading && items.length === 0));
 
   return (
-    <section className="mt-4 rounded-2xl border border-nanny-orange/20 bg-white p-4 sm:p-5">
+    <section ref={rootRef} className="mt-4 rounded-2xl border border-nanny-orange/20 bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h4 className="flex items-center gap-2 font-bold text-nanny-deepOrange">

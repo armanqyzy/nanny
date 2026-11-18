@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
+import { acquireSocket, releaseSocket } from '../lib/socket';
+import useVisible from '../lib/useVisible';
 import { absoluteAssetUrl, api, uploadFile } from '../lib/api';
 import { useLanguage } from '../lib/i18n';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 const UPDATE_STYLES = {
   update: 'bg-blue-50 text-blue-700 border-blue-100',
@@ -32,6 +32,8 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
   const [error, setError] = useState('');
   const [form, setForm] = useState({ body: '', photo_url: '', status_label: 'Walking started' });
   const socketRef = useRef(null);
+  // On the bookings list, a card loads its updates only when it scrolls into view.
+  const [rootRef, visible] = useVisible(!compact);
   const t = {
     en: {
       compactTitle: 'Live pet updates',
@@ -110,6 +112,7 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
   );
 
   useEffect(() => {
+    if (!visible) return undefined;
     let active = true;
 
     async function load() {
@@ -126,11 +129,14 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
 
     load();
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('nanny_token') : null;
-    const socket = io(SOCKET_URL, { auth: { token } });
+    const socket = acquireSocket();
     socketRef.current = socket;
+    if (!socket) return () => { active = false; };
 
-    socket.emit('booking:join', { booking_id: bookingId });
+    // Rooms are lost on reconnect, so join again every time the connection comes back.
+    const join = () => socket.emit('booking:join', { booking_id: bookingId });
+    join();
+    socket.on('connect', join);
 
     const handleIncoming = (payload) => {
       if (Number(payload.booking_id) !== Number(bookingId)) return;
@@ -146,9 +152,14 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
 
     return () => {
       active = false;
-      socket.disconnect();
+      socket.off('connect', join);
+      socket.off('pet:update', handleIncoming);
+      socket.off('pet:photo', handleIncoming);
+      socket.off('pet:status', handleIncoming);
+      socketRef.current = null;
+      releaseSocket();
     };
-  }, [bookingId]);
+  }, [bookingId, visible]);
 
   async function sendUpdate(updateType, statusLabel) {
     setError('');
@@ -197,7 +208,7 @@ export default function PetUpdatesFeed({ bookingId, role, compact = false }) {
   }
 
   return (
-    <section className={`mt-4 rounded-2xl border border-nanny-orange/20 bg-nanny-cream/40 ${compact ? 'p-4' : 'p-5'}`}>
+    <section ref={rootRef} className={`mt-4 rounded-2xl border border-nanny-orange/20 bg-nanny-cream/40 ${compact ? 'p-4' : 'p-5'}`}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="font-bold text-nanny-deepOrange">{title}</h4>

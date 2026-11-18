@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
-import { io } from 'socket.io-client';
+import { acquireSocket, releaseSocket } from '../lib/socket';
 import DashboardLayout from '../components/DashboardLayout';
 import ChatHeader from '../components/ChatHeader';
 import ChatInput from '../components/ChatInput';
@@ -14,7 +14,6 @@ import { useLanguage } from '../lib/i18n';
 import ReportModal from '../components/ReportModal';
 import EmptyState from '../components/EmptyState';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 function upsertMessage(list, message) {
   if (list.some((item) => item.id === message.id)) {
@@ -177,8 +176,10 @@ export default function Chat() {
     if (!me) return;
     const token = localStorage.getItem('nanny_token');
     if (!token) return;
-    const socket = io(SOCKET_URL, { auth: { token } });
+    const socket = acquireSocket();
+    if (!socket) return;
     socketRef.current = socket;
+    const events = ['message:new', 'message:typing', 'message:delivered', 'message:deleted', 'presence:update'];
 
     socket.on('message:new', (message) => {
       setMessages((prev) => {
@@ -230,7 +231,10 @@ export default function Chat() {
     ensureSupportThread();
 
     return () => {
-      socket.disconnect();
+      // The connection is shared with the header, so only this page's listeners are removed.
+      events.forEach((event) => socket.off(event));
+      socketRef.current = null;
+      releaseSocket();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me]);
