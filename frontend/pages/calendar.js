@@ -291,7 +291,7 @@ export default function Calendar() {
                       type="button"
                       onClick={() => setSelectedKey(k)}
                       onDoubleClick={() => { openDay(k); setView('day'); }}
-                      className={`min-h-[104px] border-r border-nanny-orange/10 p-1.5 text-left align-top transition last:border-r-0 sm:min-h-[118px] sm:p-2 ${
+                      className={`flex min-h-[116px] flex-col items-start justify-start border-r border-nanny-orange/10 p-1.5 text-left transition last:border-r-0 sm:min-h-[124px] sm:p-2 ${
                         isSel ? 'bg-[#fff4e8]' : outside ? 'bg-[#fffcf8]' : 'bg-white hover:bg-[#fffaf3]'
                       }`}
                     >
@@ -309,7 +309,7 @@ export default function Calendar() {
                   );
                 })}
               </div>
-              <div className="pointer-events-none absolute inset-x-0 top-9">
+              <div className="pointer-events-none absolute inset-x-0 top-10">
                 {segs.filter((sg) => sg.lane < MAX_LANES).map((sg) => (
                   <button
                     key={`${sg.e._role}-${sg.e.id}`}
