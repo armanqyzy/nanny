@@ -355,12 +355,13 @@ export default function Pets() {
 
 
       {adding && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
              onClick={resetModalState}>
           <div onClick={(e) => e.stopPropagation()}
-               className="bg-white text-nanny-brownish rounded-[32px] w-full max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl">
+               className="flex max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden bg-white text-nanny-brownish shadow-2xl sm:max-h-[92vh] sm:rounded-[32px]">
+            <div className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
             <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="max-h-[92vh] overflow-y-auto p-6 lg:p-7">
+              <div className="p-5 sm:p-6 lg:max-h-[92vh] lg:overflow-y-auto lg:p-7">
                 <div className="flex items-start justify-between gap-4 mb-6">
                   <div>
                     <p className="text-xs uppercase tracking-[0.22em] opacity-55">
@@ -632,7 +633,7 @@ export default function Pets() {
                 </div>
               </div>
 
-              <aside className="max-h-[92vh] overflow-y-auto border-t lg:border-t-0 lg:border-l border-nanny-orange/10 bg-gradient-to-b from-[#fff8ef] to-white p-6 lg:p-7">
+              <aside className="border-t border-nanny-orange/10 bg-gradient-to-b from-[#fff8ef] to-white p-5 sm:p-6 lg:max-h-[92vh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:p-7">
                 <p className="text-xs uppercase tracking-[0.22em] opacity-55">{t.livePreview || 'Live preview'}</p>
                 <div className="mt-4 overflow-hidden rounded-[28px] border border-nanny-orange/15 bg-white shadow-card">
                   <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/pet-placeholder.png'; }}
@@ -690,13 +691,23 @@ export default function Pets() {
                   </div>
                 </div>
 
-                <div className="mt-5 flex gap-2">
+                <div className="mt-5 hidden gap-2 lg:flex">
                   <button onClick={resetModalState} className="btn-ghost flex-1">{t.cancel || 'Cancel'}</button>
                   <button onClick={save} className="btn-primary flex-1">
                     {editing ? (t.saveChanges || 'Save changes') : (t.createProfile || 'Create pet profile')}
                   </button>
                 </div>
               </aside>
+            </div>
+            </div>
+            {/* Phones and tablets: buttons always visible at the bottom of the window. */}
+            <div className="flex flex-wrap gap-2 border-t border-nanny-orange/15 bg-white px-4 py-3 shadow-[0_-8px_24px_rgba(122,75,31,0.08)] lg:hidden"
+                 style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+              {formError && <p className="w-full text-sm text-red-600">{formError}</p>}
+              <button onClick={resetModalState} className="btn-ghost flex-1">{t.cancel || 'Cancel'}</button>
+              <button onClick={save} className="btn-primary flex-[2]">
+                {editing ? (t.saveChanges || 'Save changes') : (t.createProfile || 'Create pet profile')}
+              </button>
             </div>
           </div>
         </div>
