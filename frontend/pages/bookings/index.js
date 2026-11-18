@@ -234,6 +234,26 @@ export default function Bookings() {
     router.replace({ pathname: '/bookings' }, undefined, { shallow: true });
   }, [rebookFromQuery, data.asOwner]);
 
+  // Links from the calendar (/bookings?open=12) expand that booking and scroll to it.
+  const openFromQuery = router.query.open;
+  useEffect(() => {
+    if (!openFromQuery) return;
+    const id = Number(openFromQuery);
+    const asOwner = data.asOwner.find((item) => Number(item.id) === id);
+    const asSitter = data.asSitter.find((item) => Number(item.id) === id);
+    const found = asSitter || asOwner;
+    if (!found) return;
+    const role = asSitter ? 'sitter' : 'owner';
+    const groupKey = `${role}-${role === 'owner' ? (found.sitter_user_id || found.sitter_id) : found.owner_id}`;
+    setFilter('all');
+    setExpandedIds((prev) => ({ ...prev, [id]: true }));
+    setOpenGroups((prev) => ({ ...prev, [groupKey]: true }));
+    setTimeout(() => {
+      document.getElementById(`booking-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    router.replace({ pathname: '/bookings' }, undefined, { shallow: true });
+  }, [openFromQuery, data.asOwner, data.asSitter]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function openRebook(b) {
     setRebookBooking(b);
     setRebookForm({
@@ -351,7 +371,7 @@ export default function Bookings() {
           : null;
 
     return (
-      <div className={`overflow-hidden ${inGroup ? 'rounded-2xl' : 'rounded-[26px]'} border bg-white transition ${open ? 'border-nanny-orange/30 shadow-card' : 'border-nanny-orange/12 shadow-[0_6px_18px_rgba(122,75,31,0.06)] hover:border-nanny-orange/30 hover:shadow-card'}`}>
+      <div id={`booking-${b.id}`} className={`scroll-mt-28 overflow-hidden ${inGroup ? 'rounded-2xl' : 'rounded-[26px]'} border bg-white transition ${open ? 'border-nanny-orange/30 shadow-card' : 'border-nanny-orange/12 shadow-[0_6px_18px_rgba(122,75,31,0.06)] hover:border-nanny-orange/30 hover:shadow-card'}`}>
         <button
           type="button"
           onClick={() => toggleExpanded(b.id)}
